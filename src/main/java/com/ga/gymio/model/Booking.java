@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "bookings")
+@Table(name = "bookings", uniqueConstraints = { @UniqueConstraint(columnNames = {"customer_id", "fitness_class_id"})})
 public class Booking {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,10 +33,10 @@ public class Booking {
     private LocalDateTime bookedAt;
 
     @ManyToOne
-    @JoinColumn(name = "customer_id")
+    @JoinColumn(name = "customer_id", nullable = false)
     private User customer;
 
     @ManyToOne
-    @JoinColumn(name = "fitness_class_id")
+    @JoinColumn(name = "fitness_class_id", nullable = false)
     private FitnessClass fitnessClass;
 }
