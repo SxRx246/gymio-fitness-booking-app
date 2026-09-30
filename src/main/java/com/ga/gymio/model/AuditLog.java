@@ -22,6 +22,7 @@ public class AuditLog {
 
     private String action;
 
+    @Lobgit
     private String description;
 
     @CreationTimestamp
