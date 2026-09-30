@@ -1,5 +1,6 @@
 package com.ga.gymio.service;
 
+import com.ga.gymio.exception.InformationExistsException;
 import com.ga.gymio.model.User;
 import com.ga.gymio.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,6 @@ public class UserService {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
             return userRepository.save(user);
         }
-        throw new RuntimeException("User with this email already exists");
+        throw new InformationExistsException("User with email: "+ user.getEmail() +" already exists");
     }
 }
