@@ -20,7 +20,19 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String action;
+    public enum Action {
+        SIGNUP,
+        LOGIN,
+        LOGOUT,
+        CREATE_CLASS,
+        UPDATE_CLASS,
+        DELETE_CLASS,
+        CANCEL_CLASS,
+        BOOK_CLASS,
+        CANCEL_BOOKING
+    }
+    @Enumerated(EnumType.STRING)
+    private Action action;
 
     @Lob
     private String description;
