@@ -96,7 +96,7 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public ResponseEntity<?> loginUser(LoginRequest loginRequest){
+    public LoginResponse loginUser(LoginRequest loginRequest){
         try{
             Authentication authentication = authenticationManager
                     .authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getEmail(),
@@ -104,7 +104,7 @@ public class UserService {
             SecurityContextHolder.getContext().setAuthentication(authentication);
             myUserDetails = (MyUserDetails) authentication.getPrincipal();
             final String JWT = jwtUtils.generateJwtToken(myUserDetails);
-            return ResponseEntity.ok(new LoginResponse(JWT));
+            return new LoginResponse(JWT);
         } catch (AuthenticationException e) {
             throw new InvalidCredentialsException( "Invalid email or password");
         }
