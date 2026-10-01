@@ -1,4 +1,4 @@
-package com.ga.gymio.model.response;
+package com.ga.gymio.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

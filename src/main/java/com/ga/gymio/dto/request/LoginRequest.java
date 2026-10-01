@@ -1,4 +1,4 @@
-package com.ga.gymio.model.request;
+package com.ga.gymio.dto.request;
 
 import lombok.Getter;
 
