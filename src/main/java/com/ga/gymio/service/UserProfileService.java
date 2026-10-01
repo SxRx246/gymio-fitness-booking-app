@@ -73,6 +73,36 @@ public class UserProfileService {
         return mapToResponse(profile);
     }
 
+    public ProfileResponse updateProfile(
+            ProfileRequest request,
+            MultipartFile image) {
+
+        User user = getAuthenticatedUser();
+
+        UserProfile profile =
+                userProfileRepository.findByUserId(user.getId())
+                        .orElseThrow(() ->
+                                new InformationNotFoundException(
+                                        "Profile not found"
+                                )
+                        );
+
+        profile.setFirstName(request.getFirstName());
+        profile.setLastName(request.getLastName());
+        profile.setPhoneNumber(request.getPhoneNumber());
+        profile.setDateOfBirth(request.getDateOfBirth());
+
+        if (image != null && !image.isEmpty()) {
+            String imageUrl = saveImage(image);
+            profile.setProfileImage(imageUrl);
+        }
+
+        UserProfile updatedProfile =
+                userProfileRepository.save(profile);
+
+        return mapToResponse(updatedProfile);
+    }
+
     private User getAuthenticatedUser() {
 
         Authentication authentication =
@@ -161,5 +191,7 @@ public class UserProfileService {
             );
         }
     }
+
+
 
 }
