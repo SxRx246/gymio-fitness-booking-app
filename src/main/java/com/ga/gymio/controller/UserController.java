@@ -33,4 +33,15 @@ public class UserController {
         return ResponseEntity.ok("Email verified successfully. You can now log in.");
     }
 
+    @PostMapping("/resend-verification")
+    public ResponseEntity<String> resendVerificationEmail(
+            @RequestParam String email) {
+        System.out.println("Controller Calling resendVerificationEmail() ==>");
+        userService.resendVerificationEmail(email);
+
+        return ResponseEntity.ok(
+                "A new verification email has been sent."
+        );
+    }
+
 }
