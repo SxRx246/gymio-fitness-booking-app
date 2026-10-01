@@ -9,12 +9,12 @@ import com.ga.gymio.dto.request.LoginRequest;
 import com.ga.gymio.dto.response.LoginResponse;
 import com.ga.gymio.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +29,6 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JWTUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
-    private MyUserDetails myUserDetails;
     private final EmailService emailService;
 
     public void createUser(RegisterRequest request) {
@@ -102,15 +101,12 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public void resendVerificationEmail(String email) {
+    public void resendVerificationEmail(String email) throws UsernameNotFoundException {
 
-        User user = userRepository.findByEmail(email);
-
-        if (user == null) {
-            throw new InformationNotFoundException(
-                    "User not found"
-            );
-        }
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new UsernameNotFoundException("User not found")
+                );
 
         if (user.isEmailVerified()) {
             throw new InformationExistsException(
