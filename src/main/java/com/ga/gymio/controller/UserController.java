@@ -20,9 +20,9 @@ public class UserController {
         return userService.createUser(userObject);
     }
 
-//    @PostMapping("/login")
-//    public ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest){
-//        System.out.println("Calling loginUser ==> ");
-//        return userService.loginUser(loginRequest);
-//    }
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> loginUser(@RequestBody LoginRequest loginRequest) {
+        System.out.println("Controller Calling Login() ==>");
+        return ResponseEntity.ok(userService.loginUser(loginRequest));
+    }
 }
