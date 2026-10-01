@@ -1,10 +1,13 @@
 package com.ga.gymio.controller;
 
+import com.ga.gymio.dto.request.RegisterRequest;
 import com.ga.gymio.model.User;
 import com.ga.gymio.dto.request.LoginRequest;
 import com.ga.gymio.dto.response.LoginResponse;
 import com.ga.gymio.service.UserService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,9 +18,14 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/register")
-    public User createUser(@RequestBody User userObject){
-        System.out.println("Calling createUser ==> ");
-        return userService.createUser(userObject);
+    public ResponseEntity<String> createUser(
+            @Valid @RequestBody RegisterRequest registerRequest) {
+
+        userService.createUser(registerRequest);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body("Registration successful. Please check your email to verify your account.");
     }
 
     @PostMapping("/login")

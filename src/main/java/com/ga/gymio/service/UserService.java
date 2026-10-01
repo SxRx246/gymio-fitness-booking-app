@@ -65,7 +65,7 @@ public class UserService {
                     token
             );
         }
-        throw new InformationExistsException("User with email: "+ user.getEmail() +" already exists");
+        throw new InformationExistsException("User with email: "+ email +" already exists");
     }
 
     public void verifyEmail(String token) {
