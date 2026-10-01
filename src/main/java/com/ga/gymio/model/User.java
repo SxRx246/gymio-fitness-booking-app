@@ -46,6 +46,8 @@ public class User {
 
     private LocalDateTime verificationTokenExpiresAt;
 
+    private LocalDateTime verificationEmailSentAt;
+
     private boolean emailVerified;
 
     @CreationTimestamp
