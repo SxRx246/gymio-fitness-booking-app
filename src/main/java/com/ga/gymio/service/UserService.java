@@ -31,6 +31,7 @@ public class UserService {
 //                user.isEmailVerified() &&
                         !userRepository.existsByEmail(user.getEmail()) ){
             user.setPassword(passwordEncoder.encode(user.getPassword()));
+
             return userRepository.save(user);
         }
         throw new InformationExistsException("User with email: "+ user.getEmail() +" already exists");
