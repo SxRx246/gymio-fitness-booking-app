@@ -19,6 +19,7 @@ public class EmailService {
         SimpleMailMessage message = new SimpleMailMessage();
 
         message.setTo(email);
+
         message.setSubject("Verify your Gymio account");
 
         message.setText(
