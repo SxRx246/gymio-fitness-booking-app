@@ -3,6 +3,7 @@ package com.ga.gymio.service;
 import com.ga.gymio.authentication.JWTUtils;
 import com.ga.gymio.authentication.MyUserDetails;
 import com.ga.gymio.exception.InformationExistsException;
+import com.ga.gymio.exception.InformationNotFoundException;
 import com.ga.gymio.model.User;
 import com.ga.gymio.model.request.LoginRequest;
 import com.ga.gymio.model.response.LoginResponse;
@@ -58,6 +59,39 @@ public class UserService {
             return savedUser;
         }
         throw new InformationExistsException("User with email: "+ user.getEmail() +" already exists");
+    }
+
+    public void verifyEmail(String token) {
+
+        User user = userRepository
+                .findByVerificationToken(token)
+                .orElseThrow(() ->
+                        new InformationNotFoundException(
+                                "Invalid verification token"
+                        )
+                );
+
+        if (user.isEmailVerified()) {
+            throw new InformationExistsException(
+                    "Email is already verified"
+            );
+        }
+
+        if (user.getVerificationTokenExpiresAt()
+                .isBefore(LocalDateTime.now())) {
+
+            throw new InformationNotFoundException(
+                    "Verification token has expired"
+            );
+        }
+
+        user.setEmailVerified(true);
+
+        user.setVerificationToken(null);
+
+        user.setVerificationTokenExpiresAt(null);
+
+        userRepository.save(user);
     }
 
     public ResponseEntity<?> loginUser(LoginRequest loginRequest){
