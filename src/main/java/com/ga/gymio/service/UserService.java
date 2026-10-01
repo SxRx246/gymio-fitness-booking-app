@@ -3,7 +3,8 @@ package com.ga.gymio.service;
 import com.ga.gymio.authentication.JWTUtils;
 import com.ga.gymio.authentication.MyUserDetails;
 import com.ga.gymio.exception.InformationExistsException;
-import com.ga.gymio.exception.InformationNotFoundException;
+import com.ga.gymio.exception.InvalidCredentialsException;
+import com.ga.gymio.exception.InvalidTokenException;
 import com.ga.gymio.model.User;
 import com.ga.gymio.model.request.LoginRequest;
 import com.ga.gymio.model.response.LoginResponse;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -66,7 +68,7 @@ public class UserService {
         User user = userRepository
                 .findByVerificationToken(token)
                 .orElseThrow(() ->
-                        new InformationNotFoundException(
+                        new InvalidTokenException(
                                 "Invalid verification token"
                         )
                 );
@@ -80,7 +82,7 @@ public class UserService {
         if (user.getVerificationTokenExpiresAt()
                 .isBefore(LocalDateTime.now())) {
 
-            throw new InformationNotFoundException(
+            throw new InvalidTokenException(
                     "Verification token has expired"
             );
         }
@@ -103,9 +105,8 @@ public class UserService {
             myUserDetails = (MyUserDetails) authentication.getPrincipal();
             final String JWT = jwtUtils.generateJwtToken(myUserDetails);
             return ResponseEntity.ok(new LoginResponse(JWT));
-        }
-        catch (Exception e){
-            return ResponseEntity.ok(new LoginResponse("Error: user name or email is incorrect."));
+        } catch (AuthenticationException e) {
+            throw new InvalidCredentialsException( "Invalid email or password");
         }
     }
 }
