@@ -27,6 +27,7 @@ public class UserProfile {
 
     private LocalDate dateOfBirth;
 
+    @Column(nullable = true)
     private String profileImage;
 
     @CreationTimestamp
