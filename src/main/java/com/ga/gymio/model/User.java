@@ -42,6 +42,12 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Status status;
 
+    private String verificationToken;
+
+    private LocalDateTime verificationTokenExpiresAt;
+
+    private LocalDateTime verificationEmailSentAt;
+
     private boolean emailVerified;
 
     @CreationTimestamp
