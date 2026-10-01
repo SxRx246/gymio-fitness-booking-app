@@ -1,8 +1,8 @@
 package com.ga.gymio.controller;
 
 import com.ga.gymio.model.User;
-import com.ga.gymio.model.request.LoginRequest;
-import com.ga.gymio.model.response.LoginResponse;
+import com.ga.gymio.dto.request.LoginRequest;
+import com.ga.gymio.dto.response.LoginResponse;
 import com.ga.gymio.service.UserService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
