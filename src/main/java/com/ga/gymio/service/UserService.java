@@ -2,9 +2,7 @@ package com.ga.gymio.service;
 
 import com.ga.gymio.authentication.JWTUtils;
 import com.ga.gymio.authentication.MyUserDetails;
-import com.ga.gymio.exception.InformationExistsException;
-import com.ga.gymio.exception.InvalidCredentialsException;
-import com.ga.gymio.exception.InvalidTokenException;
+import com.ga.gymio.exception.*;
 import com.ga.gymio.model.User;
 import com.ga.gymio.model.request.LoginRequest;
 import com.ga.gymio.model.response.LoginResponse;
@@ -94,6 +92,56 @@ public class UserService {
         user.setVerificationTokenExpiresAt(null);
 
         userRepository.save(user);
+    }
+
+    public void resendVerificationEmail(String email) {
+
+        User user = userRepository.findByEmail(email);
+
+        if (user == null) {
+            throw new InformationNotFoundException(
+                    "User not found"
+            );
+        }
+
+        if (user.isEmailVerified()) {
+            throw new InformationExistsException(
+                    "Email is already verified"
+            );
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        if (user.getVerificationEmailSentAt() != null) {
+
+            LocalDateTime nextAllowedTime =
+                    user.getVerificationEmailSentAt()
+                            .plusMinutes(1);
+
+            if (now.isBefore(nextAllowedTime)) {
+
+                throw new TooManyRequestsException(
+                        "Please wait before requesting another verification email."
+                );
+            }
+        }
+
+        String newToken = UUID.randomUUID().toString();
+
+        user.setVerificationToken(newToken);
+
+        user.setVerificationTokenExpiresAt(
+                now.plusHours(24)
+        );
+
+        user.setVerificationEmailSentAt(now);
+
+        userRepository.save(user);
+
+        emailService.sendVerificationEmail(
+                user.getEmail(),
+                newToken
+        );
     }
 
     public LoginResponse loginUser(LoginRequest loginRequest){
