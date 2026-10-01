@@ -32,40 +32,41 @@ public class UserService {
     private MyUserDetails myUserDetails;
     private final EmailService emailService;
 
-    public void createUser(RegisterRequest request){
+    public void createUser(RegisterRequest request) {
         String email = request.getEmail().trim().toLowerCase();
 
-        if(!userRepository.existsByEmail(email) ){
-            User user = new User();
-
-            user.setEmail(email);
-
-            user.setPassword(passwordEncoder.encode(request.getPassword()));
-
-            user.setEmailVerified(false);
-
-            user.setStatus(User.Status.ACTIVE);
-
-            String token = UUID.randomUUID().toString();
-
-            user.setVerificationToken(token);
-
-            user.setVerificationTokenExpiresAt(
-                    LocalDateTime.now().plusHours(24)
-            );
-
-            user.setVerificationEmailSentAt(
-                    LocalDateTime.now()
-            );
-
-            User savedUser = userRepository.save(user);
-
-            emailService.sendVerificationEmail(
-                    savedUser.getEmail(),
-                    token
-            );
+        if (!userRepository.existsByEmail(email)) {
+            throw new InformationExistsException("User with email: " + email + " already exists");
         }
-        throw new InformationExistsException("User with email: "+ email +" already exists");
+
+        User user = new User();
+
+        user.setEmail(email);
+
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+
+        user.setEmailVerified(false);
+
+        user.setStatus(User.Status.ACTIVE);
+
+        String token = UUID.randomUUID().toString();
+
+        user.setVerificationToken(token);
+
+        user.setVerificationTokenExpiresAt(
+                LocalDateTime.now().plusHours(24)
+        );
+
+        user.setVerificationEmailSentAt(
+                LocalDateTime.now()
+        );
+
+        User savedUser = userRepository.save(user);
+
+        emailService.sendVerificationEmail(
+                savedUser.getEmail(),
+                token
+        );
     }
 
     public void verifyEmail(String token) {
@@ -151,8 +152,8 @@ public class UserService {
         );
     }
 
-    public LoginResponse loginUser(LoginRequest loginRequest){
-        try{
+    public LoginResponse loginUser(LoginRequest loginRequest) {
+        try {
             Authentication authentication = authenticationManager
                     .authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getEmail(),
                             loginRequest.getPassword()));
@@ -161,7 +162,7 @@ public class UserService {
             final String JWT = jwtUtils.generateJwtToken(myUserDetails);
             return new LoginResponse(JWT);
         } catch (AuthenticationException e) {
-            throw new InvalidCredentialsException( "Invalid email or password");
+            throw new InvalidCredentialsException("Invalid email or password");
         }
     }
 }
