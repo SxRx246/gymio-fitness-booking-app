@@ -2,6 +2,7 @@ package com.ga.gymio.service;
 
 import com.ga.gymio.authentication.JWTUtils;
 import com.ga.gymio.authentication.MyUserDetails;
+import com.ga.gymio.dto.request.RegisterRequest;
 import com.ga.gymio.exception.*;
 import com.ga.gymio.model.User;
 import com.ga.gymio.dto.request.LoginRequest;
@@ -31,11 +32,19 @@ public class UserService {
     private MyUserDetails myUserDetails;
     private final EmailService emailService;
 
-    public User createUser(User user){
-        if(!userRepository.existsByEmail(user.getEmail()) ){
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
+    public void createUser(RegisterRequest request){
+        String email = request.getEmail().trim().toLowerCase();
+
+        if(!userRepository.existsByEmail(email) ){
+            User user = new User();
+
+            user.setEmail(email);
+
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
 
             user.setEmailVerified(false);
+
+            user.setStatus(User.Status.ACTIVE);
 
             String token = UUID.randomUUID().toString();
 
@@ -55,8 +64,6 @@ public class UserService {
                     savedUser.getEmail(),
                     token
             );
-
-            return savedUser;
         }
         throw new InformationExistsException("User with email: "+ user.getEmail() +" already exists");
     }
