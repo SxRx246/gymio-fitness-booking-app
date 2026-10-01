@@ -25,4 +25,12 @@ public class UserController {
         System.out.println("Controller Calling Login() ==>");
         return ResponseEntity.ok(userService.loginUser(loginRequest));
     }
+
+    @GetMapping("/verify")
+    public ResponseEntity<String> verifyEmail(@RequestParam String token) {
+        System.out.println("Controller Calling verifyEmail() ==>");
+        userService.verifyEmail(token);
+        return ResponseEntity.ok("Email verified successfully. You can now log in.");
+    }
+
 }
