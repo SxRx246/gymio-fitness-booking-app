@@ -16,6 +16,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -25,14 +28,34 @@ public class UserService {
     private final JWTUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
     private MyUserDetails myUserDetails;
+    private final EmailService emailService;
 
     public User createUser(User user){
-        if(
-//                user.isEmailVerified() &&
-                        !userRepository.existsByEmail(user.getEmail()) ){
+        if(!userRepository.existsByEmail(user.getEmail()) ){
             user.setPassword(passwordEncoder.encode(user.getPassword()));
 
-            return userRepository.save(user);
+            user.setEmailVerified(false);
+
+            String token = UUID.randomUUID().toString();
+
+            user.setVerificationToken(token);
+
+            user.setVerificationTokenExpiresAt(
+                    LocalDateTime.now().plusHours(24)
+            );
+
+            user.setVerificationEmailSentAt(
+                    LocalDateTime.now()
+            );
+
+            User savedUser = userRepository.save(user);
+
+            emailService.sendVerificationEmail(
+                    savedUser.getEmail(),
+                    token
+            );
+
+            return savedUser;
         }
         throw new InformationExistsException("User with email: "+ user.getEmail() +" already exists");
     }
