@@ -43,7 +43,10 @@ public class SecurityConfiguration {
                                 "/auth/users/login",
                                 "/auth/users/register",
                                 "/auth/users/verify",
-                                "auth/users/resend-verification"
+                                "auth/users/resend-verification",
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 );
