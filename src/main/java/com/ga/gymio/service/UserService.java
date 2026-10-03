@@ -35,7 +35,7 @@ public class UserService {
         String email = request.getEmail().trim().toLowerCase();
 
         if (userRepository.existsByEmail(email)) {
-            throw new InformationExistsException("User with email: " + email + " already exists");
+            throw new InformationExistsException("An account with this email address already exists.");
         }
 
         User user = new User();
