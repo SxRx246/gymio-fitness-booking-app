@@ -35,7 +35,7 @@ public class UserService {
     public void createUser(RegisterRequest request) {
         String email = request.getEmail().trim().toLowerCase();
 
-        if (!userRepository.existsByEmail(email)) {
+        if (userRepository.existsByEmail(email)) {
             throw new InformationExistsException("User with email: " + email + " already exists");
         }
 
