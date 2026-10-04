@@ -96,4 +96,16 @@ public class FitnessClassService {
 
         return fitnessClassRepository.save(existingFitnessClass);
     }
+
+    public void cancelFitnessClass(Long id){
+
+        FitnessClass fitnessClass = fitnessClassRepository.findById(id).orElseThrow(() ->
+                new InformationNotFoundException(
+                        "Fitness Class with id " + id + " not found"
+                ));
+
+        fitnessClass.setStatus(FitnessClass.Status.CANCELLED);
+
+        fitnessClassRepository.save(fitnessClass);
+    }
 }
