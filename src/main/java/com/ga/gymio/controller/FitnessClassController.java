@@ -31,7 +31,7 @@ public class FitnessClassController {
     }
 
     @GetMapping("/trainer/{trainerId}")
-    public List<FitnessClass> getFitnessClasses(@PathVariable Long trainer_id){
-        return fitnessClassService.getFitnessClasses(trainer_id);
+    public List<FitnessClass> getFitnessClasses(@PathVariable Long trainerId){
+        return fitnessClassService.getFitnessClasses(trainerId);
     }
 }
