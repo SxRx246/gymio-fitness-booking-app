@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import com.ga.gymio.dto.request.FitnessClassRequest;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -123,10 +122,22 @@ public class FitnessClassService {
                         "Fitness Class with id " + id + " not found"
                 ));
 
+        if (fitnessClass.getStatus() == FitnessClass.Status.COMPLETED) {
+            throw new IllegalArgumentException(
+                    "Completed fitness classes cannot be cancelled"
+            );
+        }
+
+        if (fitnessClass.getStatus() == FitnessClass.Status.CANCELLED) {
+            throw new IllegalArgumentException(
+                    "Fitness class is already cancelled"
+            );
+        }
+
+
         fitnessClass.setStatus(FitnessClass.Status.CANCELLED);
 
-        FitnessClass cancelledClass =
-                fitnessClassRepository.save(fitnessClass);
+        FitnessClass cancelledClass = fitnessClassRepository.save(fitnessClass);
 
         logger.info("Fitness class cancelled successfully with id {}", cancelledClass.getId());
     }
