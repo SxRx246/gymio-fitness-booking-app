@@ -62,7 +62,14 @@ public class FitnessClassService {
                 )
         );
     }
-    public List<FitnessClass> getFitnessClasses(User trainer){
+    public List<FitnessClass> getFitnessClasses(Long trainerId){
+        User trainer = userRepository.findById(trainerId)
+                .orElseThrow(() ->
+                        new InformationNotFoundException(
+                                "Trainer not found"
+                        )
+                );
+
         return fitnessClassRepository.findByTrainer(trainer);
     }
 }
