@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import com.ga.gymio.dto.request.FitnessClassRequest;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -52,5 +53,16 @@ public class FitnessClassService {
         fitnessClass.setTrainer(trainer);
 
         return fitnessClassRepository.save(fitnessClass);
+    }
+
+    public FitnessClass getFitnessClass(Long id){
+        return fitnessClassRepository.findById(id).orElseThrow( () ->
+                new InformationNotFoundException(
+                        "Fitness Class with id " + id + " not found"
+                )
+        );
+    }
+    public List<FitnessClass> getFitnessClasses(User trainer){
+        return fitnessClassRepository.findByTrainer(trainer);
     }
 }
