@@ -1,5 +1,6 @@
 package com.ga.gymio.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -24,6 +25,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @JsonIgnore
     private String password;
 
     public enum Role {
@@ -42,10 +44,13 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Status status;
 
+    @JsonIgnore
     private String verificationToken;
 
+    @JsonIgnore
     private LocalDateTime verificationTokenExpiresAt;
 
+    @JsonIgnore
     private LocalDateTime verificationEmailSentAt;
 
     private boolean emailVerified;
