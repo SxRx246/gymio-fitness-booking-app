@@ -72,4 +72,28 @@ public class FitnessClassService {
 
         return fitnessClassRepository.findByTrainer(trainer);
     }
+
+    public FitnessClass updateFitnessClass(FitnessClassRequest request, Long fitnessClassId){
+        FitnessClass existingFitnessClass = fitnessClassRepository.findById(fitnessClassId).orElseThrow(
+                () -> new InformationNotFoundException(
+                        "Fitness class with id " + fitnessClassId + " not found"
+                )
+        );
+
+        if (request.getStartTime().isAfter(request.getEndTime())) {
+            throw new IllegalArgumentException(
+                    "Start time must be before end time"
+            );
+        }
+
+        existingFitnessClass.setName(request.getName());
+        existingFitnessClass.setDescription(request.getDescription());
+        existingFitnessClass.setCapacity(request.getCapacity());
+        existingFitnessClass.setStartTime(request.getStartTime());
+        existingFitnessClass.setEndTime(request.getEndTime());
+        existingFitnessClass.setLevel(request.getLevel());
+        existingFitnessClass.setType(request.getType());
+
+        return fitnessClassRepository.save(existingFitnessClass);
+    }
 }
