@@ -10,11 +10,14 @@ import com.ga.gymio.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import com.ga.gymio.dto.request.FitnessClassRequest;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -37,8 +40,26 @@ public class FitnessClassService {
                 );
 
         if (trainer.getRole() != User.Role.TRAINER) {
-            throw new IllegalArgumentException(
-                    "User must have a trainer role"
+            throw new ForbiddenException(
+                    "Selected user must have a trainer role");
+        }
+
+        if (trainer.getStatus() != User.Status.ACTIVE) {
+            throw new ForbiddenException(
+                    "Trainer is not active");
+        }
+
+        if (!trainer.isEmailVerified()) {
+            throw new ForbiddenException(
+                    "Trainer email is not verified");
+        }
+
+        User currentUser = getCurrentUser();
+
+        if (currentUser.getRole() == User.Role.TRAINER
+                && !trainer.getId().equals(currentUser.getId())) {
+            throw new ForbiddenException(
+                    "You can only create fitness classes for yourself"
             );
         }
 
@@ -68,15 +89,16 @@ public class FitnessClassService {
         return savedClass;
     }
 
-    public FitnessClass getFitnessClass(Long id){
+    public FitnessClass getFitnessClass(Long id) {
         logger.info("Retrieving fitness class with id {}", id);
-        return fitnessClassRepository.findById(id).orElseThrow( () ->
+        return fitnessClassRepository.findById(id).orElseThrow(() ->
                 new InformationNotFoundException(
                         "Fitness Class with id " + id + " not found"
                 )
         );
     }
-    public List<FitnessClass> getFitnessClasses(Long trainerId){
+
+    public List<FitnessClass> getFitnessClasses(Long trainerId) {
         logger.info("Retrieving fitness classes of trainer {}", trainerId);
 
         User trainer = userRepository.findById(trainerId)
@@ -96,8 +118,7 @@ public class FitnessClassService {
         return fitnessClassRepository.findByTrainer(trainer);
     }
 
-    private void checkClassOwnership(FitnessClass fitnessClass) {
-
+    private User getCurrentUser() {
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
 
@@ -105,6 +126,13 @@ public class FitnessClassService {
                 (MyUserDetails) authentication.getPrincipal();
 
         User currentUser = myUserDetails.getUser();
+
+        return currentUser;
+    }
+
+    private void checkClassOwnership(FitnessClass fitnessClass) {
+
+        User currentUser = getCurrentUser();
 
         if (currentUser.getRole() == User.Role.ADMIN) {
             return;
@@ -120,7 +148,7 @@ public class FitnessClassService {
         );
     }
 
-    public FitnessClass updateFitnessClass(FitnessClassRequest request, Long id){
+    public FitnessClass updateFitnessClass(FitnessClassRequest request, Long id) {
         logger.info("Updating fitness class with id {}", id);
 
         FitnessClass existingFitnessClass = fitnessClassRepository.findById(id).orElseThrow(
@@ -130,6 +158,15 @@ public class FitnessClassService {
         );
 
         checkClassOwnership(existingFitnessClass);
+
+        if (existingFitnessClass.getStatus() == FitnessClass.Status.COMPLETED
+                || existingFitnessClass.getStatus() == FitnessClass.Status.CANCELLED
+                || existingFitnessClass.getStatus() == FitnessClass.Status.IN_PROGRESS) {
+
+            throw new IllegalArgumentException(
+                    "Completed, cancelled, or in-progress classes cannot be updated"
+            );
+        }
 
         if (request.getStartTime().isAfter(request.getEndTime())) {
             throw new IllegalArgumentException(
@@ -152,7 +189,7 @@ public class FitnessClassService {
         return updatedClass;
     }
 
-    public void cancelFitnessClass(Long id){
+    public void cancelFitnessClass(Long id) {
         logger.info("Cancelling fitness class with id {}", id);
 
         FitnessClass fitnessClass = fitnessClassRepository.findById(id).orElseThrow(() ->
@@ -181,5 +218,66 @@ public class FitnessClassService {
         FitnessClass cancelledClass = fitnessClassRepository.save(fitnessClass);
 
         logger.info("Fitness class cancelled successfully with id {}", cancelledClass.getId());
+    }
+
+    @Scheduled(fixedRate = 60000)
+    @Transactional
+    public void updateFitnessClassStatuses() {
+
+        List<FitnessClass> scheduledClasses =
+                fitnessClassRepository
+                        .findByStatusAndStartTimeLessThanEqual(
+                                FitnessClass.Status.SCHEDULED,
+                                LocalDateTime.now()
+                        );
+
+        for (FitnessClass fitnessClass : scheduledClasses) {
+
+            if (!LocalDateTime.now().isBefore(fitnessClass.getEndTime())) {
+
+                fitnessClass.setStatus(
+                        FitnessClass.Status.COMPLETED
+                );
+
+                logger.info(
+                        "Fitness class {} has been completed",
+                        fitnessClass.getId()
+                );
+
+            } else {
+
+                fitnessClass.setStatus(
+                        FitnessClass.Status.IN_PROGRESS
+                );
+
+                logger.info(
+                        "Fitness class {} is now in progress",
+                        fitnessClass.getId()
+                );
+            }
+        }
+
+        fitnessClassRepository.saveAll(scheduledClasses);
+
+        List<FitnessClass> inProgressClasses =
+                fitnessClassRepository
+                        .findByStatusAndEndTimeLessThanEqual(
+                                FitnessClass.Status.IN_PROGRESS,
+                                LocalDateTime.now()
+                        );
+
+        for (FitnessClass fitnessClass : inProgressClasses) {
+
+            fitnessClass.setStatus(
+                    FitnessClass.Status.COMPLETED
+            );
+
+            logger.info(
+                    "Fitness class {} has been completed",
+                    fitnessClass.getId()
+            );
+        }
+
+        fitnessClassRepository.saveAll(inProgressClasses);
     }
 }
