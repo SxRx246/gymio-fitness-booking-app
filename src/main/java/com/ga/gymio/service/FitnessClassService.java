@@ -38,13 +38,25 @@ public class FitnessClassService {
 
         if (trainer.getRole() != User.Role.TRAINER) {
             throw new ForbiddenException(
-                    "User must have a trainer role"
-            );
+                    "Selected user must have a trainer role" );
         }
 
-        if (!trainer.getEmail().equals(request.getTrainerEmail())) {
+        if (trainer.getStatus() != User.Status.ACTIVE) {
             throw new ForbiddenException(
-                "You can only create fitness classes for yourself"
+                    "Trainer is not active" );
+        }
+
+        if (!trainer.isEmailVerified()) {
+            throw new ForbiddenException(
+                    "Trainer email is not verified" );
+        }
+
+        User currentUser = getCurrentUser();
+
+        if (currentUser.getRole() == User.Role.TRAINER
+                && !trainer.getId().equals(currentUser.getId())) {
+            throw new ForbiddenException(
+                    "You can only create fitness classes for yourself"
             );
         }
 
@@ -102,8 +114,7 @@ public class FitnessClassService {
         return fitnessClassRepository.findByTrainer(trainer);
     }
 
-    private void checkClassOwnership(FitnessClass fitnessClass) {
-
+    private User getCurrentUser(){
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
 
@@ -111,6 +122,13 @@ public class FitnessClassService {
                 (MyUserDetails) authentication.getPrincipal();
 
         User currentUser = myUserDetails.getUser();
+
+        return currentUser;
+    }
+
+    private void checkClassOwnership(FitnessClass fitnessClass) {
+
+        User currentUser = getCurrentUser();
 
         if (currentUser.getRole() == User.Role.ADMIN) {
             return;
