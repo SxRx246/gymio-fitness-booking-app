@@ -1,5 +1,7 @@
 package com.ga.gymio.service;
 
+import com.ga.gymio.authentication.MyUserDetails;
+import com.ga.gymio.exception.ForbiddenException;
 import com.ga.gymio.exception.InformationNotFoundException;
 import com.ga.gymio.model.FitnessClass;
 import com.ga.gymio.model.User;
@@ -8,6 +10,8 @@ import com.ga.gymio.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import com.ga.gymio.dto.request.FitnessClassRequest;
 
@@ -92,6 +96,30 @@ public class FitnessClassService {
         return fitnessClassRepository.findByTrainer(trainer);
     }
 
+    private void checkClassOwnership(FitnessClass fitnessClass) {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        MyUserDetails myUserDetails =
+                (MyUserDetails) authentication.getPrincipal();
+
+        User currentUser = myUserDetails.getUser();
+
+        if (currentUser.getRole() == User.Role.ADMIN) {
+            return;
+        }
+
+        if (currentUser.getRole() == User.Role.TRAINER
+                && fitnessClass.getTrainer().getId().equals(currentUser.getId())) {
+            return;
+        }
+
+        throw new ForbiddenException(
+                "You are not allowed to manage this fitness class"
+        );
+    }
+
     public FitnessClass updateFitnessClass(FitnessClassRequest request, Long id){
         logger.info("Updating fitness class with id {}", id);
 
@@ -100,6 +128,8 @@ public class FitnessClassService {
                         "Fitness class with id " + id + " not found"
                 )
         );
+
+        checkClassOwnership(existingFitnessClass);
 
         if (request.getStartTime().isAfter(request.getEndTime())) {
             throw new IllegalArgumentException(
@@ -129,6 +159,8 @@ public class FitnessClassService {
                 new InformationNotFoundException(
                         "Fitness Class with id " + id + " not found"
                 ));
+
+        checkClassOwnership(fitnessClass);
 
         if (fitnessClass.getStatus() == FitnessClass.Status.COMPLETED
                 || fitnessClass.getStatus() == FitnessClass.Status.IN_PROGRESS) {
