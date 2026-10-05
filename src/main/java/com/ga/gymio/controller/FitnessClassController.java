@@ -6,6 +6,7 @@ import com.ga.gymio.service.FitnessClassService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.List;
 public class FitnessClassController {
     private final FitnessClassService fitnessClassService;
 
+    @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public FitnessClass createFitnessClass(@Valid @RequestBody FitnessClassRequest fitnessClassRequest){
@@ -33,11 +35,13 @@ public class FitnessClassController {
         return fitnessClassService.getFitnessClasses(trainerId);
     }
 
+    @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
     @PutMapping("/{id}")
     public FitnessClass updateFitnessClass(@Valid @RequestBody FitnessClassRequest fitnessClassRequest, @PathVariable Long id){
         return fitnessClassService.updateFitnessClass(fitnessClassRequest, id);
     }
 
+    @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
     @PutMapping("/{id}/cancel")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void cancelFitnessClass(@PathVariable Long id){
