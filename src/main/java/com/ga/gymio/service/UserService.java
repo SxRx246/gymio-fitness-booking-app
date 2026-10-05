@@ -48,6 +48,8 @@ public class UserService {
 
         user.setStatus(User.Status.ACTIVE);
 
+        user.setRole(User.Role.CUSTOMER);
+
         String token = UUID.randomUUID().toString();
 
         user.setVerificationToken(token);
