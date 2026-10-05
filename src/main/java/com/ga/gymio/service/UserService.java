@@ -2,6 +2,7 @@ package com.ga.gymio.service;
 
 import com.ga.gymio.authentication.JWTUtils;
 import com.ga.gymio.authentication.MyUserDetails;
+import com.ga.gymio.dto.request.AdminUserUpdateRequest;
 import com.ga.gymio.dto.request.RegisterRequest;
 import com.ga.gymio.exception.*;
 import com.ga.gymio.model.User;
@@ -169,42 +170,20 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    public void updateUserRole(Long id, User.Role role) {
-
+    public void updateUser(Long id, AdminUserUpdateRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() ->
                         new InformationNotFoundException(
-                                "User with id " + id + " not found"
-                        )
+                                "User with id " + id + " not found")
                 );
 
-        if (user.getRole() == role) {
-            throw new IllegalArgumentException(
-                    "User already has the " + role + " role"
-            );
+        if (request.getRole() != null) {
+            user.setRole(request.getRole());
         }
 
-        user.setRole(role);
-
-        userRepository.save(user);
-    }
-
-    public void updateUserStatus(Long id, User.Status status) {
-
-        User user = userRepository.findById(id)
-                .orElseThrow(() ->
-                        new InformationNotFoundException(
-                                "User with id " + id + " not found"
-                        )
-                );
-
-        if (user.getStatus() == status) {
-            throw new IllegalArgumentException(
-                    "User already has the " + status + " status"
-            );
+        if (request.getStatus() != null) {
+            user.setStatus(request.getStatus());
         }
-
-        user.setStatus(status);
 
         userRepository.save(user);
     }
