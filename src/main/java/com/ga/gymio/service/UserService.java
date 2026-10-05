@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -163,4 +164,49 @@ public class UserService {
             throw new InvalidCredentialsException("Invalid email or password");
         }
     }
+
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    public void updateUserRole(Long id, User.Role role) {
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new InformationNotFoundException(
+                                "User with id " + id + " not found"
+                        )
+                );
+
+        if (user.getRole() == role) {
+            throw new IllegalArgumentException(
+                    "User already has the " + role + " role"
+            );
+        }
+
+        user.setRole(role);
+
+        userRepository.save(user);
+    }
+
+    public void updateUserStatus(Long id, User.Status status) {
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new InformationNotFoundException(
+                                "User with id " + id + " not found"
+                        )
+                );
+
+        if (user.getStatus() == status) {
+            throw new IllegalArgumentException(
+                    "User already has the " + status + " status"
+            );
+        }
+
+        user.setStatus(status);
+
+        userRepository.save(user);
+    }
+
 }
