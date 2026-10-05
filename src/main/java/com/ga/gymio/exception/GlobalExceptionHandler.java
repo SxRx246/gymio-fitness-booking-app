@@ -1,6 +1,6 @@
 package com.ga.gymio.exception;
 
-import com.ga.gymio.model.response.ErrorResponse;
+import com.ga.gymio.dto.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
