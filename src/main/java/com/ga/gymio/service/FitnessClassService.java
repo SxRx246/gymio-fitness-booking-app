@@ -33,7 +33,7 @@ public class FitnessClassService {
                 );
 
         if (trainer.getRole() != User.Role.TRAINER) {
-            throw new InformationNotFoundException(
+            throw new IllegalArgumentException(
                     "User must have a trainer role"
             );
         }
@@ -74,12 +74,20 @@ public class FitnessClassService {
     }
     public List<FitnessClass> getFitnessClasses(Long trainerId){
         logger.info("Retrieving fitness classes of trainer {}", trainerId);
+
         User trainer = userRepository.findById(trainerId)
                 .orElseThrow(() ->
                         new InformationNotFoundException(
-                                "Trainer not found"
+                                "User with id " + trainerId + " not found"
                         )
                 );
+
+        if (trainer.getRole() != User.Role.TRAINER) {
+            throw new IllegalArgumentException(
+                    "User with id " + trainerId + " is not a trainer"
+            );
+        }
+
 
         return fitnessClassRepository.findByTrainer(trainer);
     }
