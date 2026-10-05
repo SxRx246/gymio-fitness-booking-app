@@ -155,6 +155,15 @@ public class FitnessClassService {
 
         checkClassOwnership(existingFitnessClass);
 
+        if (existingFitnessClass.getStatus() == FitnessClass.Status.COMPLETED
+                || existingFitnessClass.getStatus() == FitnessClass.Status.CANCELLED
+                || existingFitnessClass.getStatus() == FitnessClass.Status.IN_PROGRESS) {
+
+            throw new IllegalArgumentException(
+                    "Completed, cancelled, or in-progress classes cannot be updated"
+            );
+        }
+
         if (request.getStartTime().isAfter(request.getEndTime())) {
             throw new IllegalArgumentException(
                     "Start time must be before end time"
