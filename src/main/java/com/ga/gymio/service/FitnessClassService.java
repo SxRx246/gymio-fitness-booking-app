@@ -130,9 +130,10 @@ public class FitnessClassService {
                         "Fitness Class with id " + id + " not found"
                 ));
 
-        if (fitnessClass.getStatus() == FitnessClass.Status.COMPLETED) {
+        if (fitnessClass.getStatus() == FitnessClass.Status.COMPLETED
+                || fitnessClass.getStatus() == FitnessClass.Status.IN_PROGRESS) {
             throw new IllegalArgumentException(
-                    "Completed fitness classes cannot be cancelled"
+                    "Completed or in-progress fitness classes cannot be cancelled"
             );
         }
 
