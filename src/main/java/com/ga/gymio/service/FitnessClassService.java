@@ -37,8 +37,14 @@ public class FitnessClassService {
                 );
 
         if (trainer.getRole() != User.Role.TRAINER) {
-            throw new IllegalArgumentException(
+            throw new ForbiddenException(
                     "User must have a trainer role"
+            );
+        }
+
+        if (!trainer.getEmail().equals(request.getTrainerEmail())) {
+            throw new ForbiddenException(
+                "You can only create fitness classes for yourself"
             );
         }
 
