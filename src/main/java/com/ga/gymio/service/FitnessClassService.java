@@ -174,6 +174,14 @@ public class FitnessClassService {
             );
         }
 
+        if(getCurrentUser().getRole() == User.Role.ADMIN){
+            User trainer = userRepository.findByEmail(request.getTrainerEmail()).
+                    orElseThrow(() -> new InformationNotFoundException(
+                            "trainer with email " + request.getTrainerEmail() + " is not found"
+                    ));
+            existingFitnessClass.setTrainer(trainer);
+        }
+
         existingFitnessClass.setName(request.getName());
         existingFitnessClass.setDescription(request.getDescription());
         existingFitnessClass.setCapacity(request.getCapacity());
@@ -198,6 +206,12 @@ public class FitnessClassService {
                 ));
 
         checkClassOwnership(fitnessClass);
+
+        if(!fitnessClass.getTrainer().getEmail().equalsIgnoreCase(getCurrentUser().getEmail())){
+            throw new ForbiddenException(
+                    "You are only allowed to cancel your own fitness classes"
+            );
+        }
 
         if (fitnessClass.getStatus() == FitnessClass.Status.COMPLETED
                 || fitnessClass.getStatus() == FitnessClass.Status.IN_PROGRESS) {
