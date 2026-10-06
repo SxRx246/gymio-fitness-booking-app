@@ -170,6 +170,14 @@ public class FitnessClassService {
             );
         }
 
+        if(getCurrentUser().getRole() == User.Role.ADMIN){
+            User trainer = userRepository.findByEmail(request.getTrainerEmail()).
+                    orElseThrow(() -> new InformationNotFoundException(
+                            "trainer with email " + request.getTrainerEmail() + " is not found"
+                    ));
+            existingFitnessClass.setTrainer(trainer);
+        }
+
         existingFitnessClass.setName(request.getName());
         existingFitnessClass.setDescription(request.getDescription());
         existingFitnessClass.setCapacity(request.getCapacity());
