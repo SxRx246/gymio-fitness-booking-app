@@ -1,6 +1,7 @@
 package com.ga.gymio.service;
 
 import com.ga.gymio.authentication.MyUserDetails;
+import com.ga.gymio.dto.response.BookingResponse;
 import com.ga.gymio.exception.ForbiddenException;
 import com.ga.gymio.exception.InformationExistsException;
 import com.ga.gymio.exception.InformationNotFoundException;
@@ -31,7 +32,7 @@ public class BookingService {
             LoggerFactory.getLogger(BookingService.class);
 
     @Transactional
-    public Booking createBooking(Long fitnessClassId) {
+    public BookingResponse createBooking(Long fitnessClassId) {
 
         logger.info(
                 "Creating booking for fitness class {}",
@@ -104,10 +105,10 @@ public class BookingService {
                 savedBooking.getId()
         );
 
-        return savedBooking;
+        return new BookingResponse(savedBooking);
     }
 
-    public List<Booking> getMyBookings() {
+    public List<BookingResponse> getMyBookings() {
 
         User currentUser = getCurrentUser();
 
@@ -117,11 +118,13 @@ public class BookingService {
         );
 
         return bookingRepository.findByCustomerId(
-                currentUser.getId()
-        );
+                        currentUser.getId()
+                ).stream()
+                .map(BookingResponse::new)
+                .toList();
     }
 
-    public Booking getBooking(Long id) {
+    public BookingResponse getBooking(Long id) {
 
         logger.info(
                 "Retrieving booking with id {}",
@@ -146,10 +149,10 @@ public class BookingService {
             );
         }
 
-        return booking;
+        return new BookingResponse(booking);
     }
 
-    public List<Booking> getBookingsByFitnessClass(Long fitnessClassId) {
+    public List<BookingResponse> getBookingsByFitnessClass(Long fitnessClassId) {
 
         logger.info(
                 "Retrieving bookings for fitness class {}",
@@ -179,14 +182,20 @@ public class BookingService {
             throw new ForbiddenException( "You are not allowed to view bookings for this fitness class" );
         }
 
-        return bookingRepository.findByFitnessClassId(fitnessClassId);
+        return bookingRepository.findByFitnessClassId(fitnessClassId)
+                .stream()
+                .map(BookingResponse::new)
+                .toList();
     }
 
-    public List<Booking> getAllBookings() {
+    public List<BookingResponse> getAllBookings() {
 
         logger.info("Admin retrieving all bookings");
 
-        return bookingRepository.findAll();
+        return bookingRepository.findAll()
+                .stream()
+                .map(BookingResponse::new)
+                .toList();
     }
 
 
