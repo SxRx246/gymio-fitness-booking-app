@@ -30,8 +30,16 @@ public class BookingController {
     }
 
     @GetMapping("/bookings/{id}")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public Booking getBooking(@PathVariable Long id) {
         return bookingService.getBooking(id);
+    }
+
+    @PutMapping("/{id}/cancel")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public void cancelBooking( @PathVariable Long id) {
+        bookingService.cancelBooking(id);
     }
 
 
