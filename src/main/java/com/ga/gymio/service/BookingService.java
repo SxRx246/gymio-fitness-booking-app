@@ -149,6 +149,47 @@ public class BookingService {
         return booking;
     }
 
+    public List<Booking> getBookingsByFitnessClass(Long fitnessClassId) {
+
+        logger.info(
+                "Retrieving bookings for fitness class {}",
+                fitnessClassId
+        );
+
+        FitnessClass fitnessClass =
+                fitnessClassRepository.findById(fitnessClassId)
+                        .orElseThrow(() ->
+                                new InformationNotFoundException(
+                                        "Fitness class with id "
+                                                + fitnessClassId
+                                                + " not found"
+                                )
+                        );
+
+        User currentUser = getCurrentUser();
+
+        if (currentUser.getRole() == User.Role.TRAINER
+                && !fitnessClass.getTrainer().getId().equals(currentUser.getId())) {
+            throw new ForbiddenException(
+                    "You can only view bookings for your own fitness classes" );
+        }
+
+        if (currentUser.getRole() != User.Role.ADMIN
+                && currentUser.getRole() != User.Role.TRAINER) {
+            throw new ForbiddenException( "You are not allowed to view bookings for this fitness class" );
+        }
+
+        return bookingRepository.findByFitnessClassId(fitnessClassId);
+    }
+
+    public List<Booking> getAllBookings() {
+
+        logger.info("Admin retrieving all bookings");
+
+        return bookingRepository.findAll();
+    }
+
+
     public void cancelBooking(Long id) {
 
         logger.info(
