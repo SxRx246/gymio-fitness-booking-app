@@ -28,17 +28,7 @@ public class FitnessClassService {
 
     private static final Logger logger = LoggerFactory.getLogger(FitnessClassService.class);
 
-    public FitnessClass createFitnessClass(FitnessClassRequest request) {
-        logger.info("Creating fitness class: {}", request.getName());
-
-        User trainer = userRepository
-                .findByEmail(request.getTrainerEmail())
-                .orElseThrow(() ->
-                        new InformationNotFoundException(
-                                "Trainer not found"
-                        )
-                );
-
+    public void validateTrainer (User trainer){
         if (trainer.getRole() != User.Role.TRAINER) {
             throw new ForbiddenException(
                     "Selected user must have a trainer role");
@@ -53,6 +43,20 @@ public class FitnessClassService {
             throw new ForbiddenException(
                     "Trainer email is not verified");
         }
+    }
+
+    public FitnessClass createFitnessClass(FitnessClassRequest request) {
+        logger.info("Creating fitness class: {}", request.getName());
+
+        User trainer = userRepository
+                .findByEmail(request.getTrainerEmail())
+                .orElseThrow(() ->
+                        new InformationNotFoundException(
+                                "Trainer not found"
+                        )
+                );
+
+        validateTrainer(trainer);
 
         User currentUser = getCurrentUser();
 
@@ -179,6 +183,7 @@ public class FitnessClassService {
                     orElseThrow(() -> new InformationNotFoundException(
                             "trainer with email " + request.getTrainerEmail() + " is not found"
                     ));
+            validateTrainer(trainer);
             existingFitnessClass.setTrainer(trainer);
         }
 
@@ -206,14 +211,6 @@ public class FitnessClassService {
                 ));
 
         checkClassOwnership(fitnessClass);
-
-        if(!fitnessClass.getTrainer().getEmail().equalsIgnoreCase(getCurrentUser().getEmail())
-                && getCurrentUser().getRole() == User.Role.TRAINER
-        ){
-            throw new ForbiddenException(
-                    "You are only allowed to cancel your own fitness classes"
-            );
-        }
 
         if (fitnessClass.getStatus() == FitnessClass.Status.COMPLETED
                 || fitnessClass.getStatus() == FitnessClass.Status.IN_PROGRESS) {
