@@ -15,4 +15,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     boolean existsByCustomerIdAndFitnessClassId(Long customerId, Long fitnessClassId);
 
     long countByFitnessClassIdAndStatus( Long fitnessClassId, Booking.Status status );
+
+    List<Booking> findByFitnessClassIdAndStatus( Long fitnessClassId, Booking.Status status );
 }

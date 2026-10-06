@@ -3,8 +3,10 @@ package com.ga.gymio.service;
 import com.ga.gymio.authentication.MyUserDetails;
 import com.ga.gymio.exception.ForbiddenException;
 import com.ga.gymio.exception.InformationNotFoundException;
+import com.ga.gymio.model.Booking;
 import com.ga.gymio.model.FitnessClass;
 import com.ga.gymio.model.User;
+import com.ga.gymio.repository.BookingRepository;
 import com.ga.gymio.repository.FitnessClassRepository;
 import com.ga.gymio.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ import java.util.List;
 public class FitnessClassService {
     private final FitnessClassRepository fitnessClassRepository;
     private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(FitnessClassService.class);
 
@@ -252,6 +255,8 @@ public class FitnessClassService {
                         FitnessClass.Status.COMPLETED
                 );
 
+                updateBookingStatuses(fitnessClass);
+
                 logger.info(
                         "Fitness class {} has been completed",
                         fitnessClass.getId()
@@ -281,6 +286,8 @@ public class FitnessClassService {
 
         for (FitnessClass fitnessClass : inProgressClasses) {
 
+            updateBookingStatuses(fitnessClass);
+
             fitnessClass.setStatus(
                     FitnessClass.Status.COMPLETED
             );
@@ -293,4 +300,19 @@ public class FitnessClassService {
 
         fitnessClassRepository.saveAll(inProgressClasses);
     }
+
+    private void updateBookingStatuses(FitnessClass fitnessClass) {
+        List<Booking> confirmedBookings =
+                bookingRepository.findByFitnessClassIdAndStatus(
+                        fitnessClass.getId(),
+                        Booking.Status.CONFIRMED
+                );
+        for (Booking booking : confirmedBookings) {
+            booking.setStatus(Booking.Status.COMPLETED);
+
+            logger.info( "Booking {} has been completed", booking.getId() ); }
+
+        bookingRepository.saveAll(confirmedBookings);
+    }
+
 }
