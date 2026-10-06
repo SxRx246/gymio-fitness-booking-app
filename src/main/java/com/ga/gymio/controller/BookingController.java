@@ -1,5 +1,6 @@
 package com.ga.gymio.controller;
 
+import com.ga.gymio.dto.response.BookingResponse;
 import com.ga.gymio.model.Booking;
 import com.ga.gymio.service.BookingService;
 import lombok.RequiredArgsConstructor;
@@ -20,19 +21,19 @@ public class BookingController {
     @PostMapping("/fitness-class/{fitnessClassId}")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('CUSTOMER')")
-    public Booking createBooking(@PathVariable Long fitnessClassId) {
+    public BookingResponse createBooking(@PathVariable Long fitnessClassId) {
         return bookingService.createBooking(fitnessClassId);
     }
 
     @GetMapping("/my")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public List<Booking> getMyBookings() {
+    public List<BookingResponse> getMyBookings() {
         return bookingService.getMyBookings();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public Booking getBooking(@PathVariable Long id) {
+    public BookingResponse getBooking(@PathVariable Long id) {
         return bookingService.getBooking(id);
     }
 
@@ -46,13 +47,13 @@ public class BookingController {
     //    admin - trainer
     @GetMapping("/fitness-class/{fitnessClassId}")
     @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
-    public List<Booking> getBookingsByFitnessClass(@PathVariable Long fitnessClassId) {
+    public List<BookingResponse> getBookingsByFitnessClass(@PathVariable Long fitnessClassId) {
         return bookingService.getBookingsByFitnessClass(fitnessClassId);
     }
 
     //    admin
     @GetMapping @PreAuthorize("hasRole('ADMIN')")
-    public List<Booking> getAllBookings() {
+    public List<BookingResponse> getAllBookings() {
         return bookingService.getAllBookings();
     }
 
