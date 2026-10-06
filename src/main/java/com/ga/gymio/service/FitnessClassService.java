@@ -208,14 +208,6 @@ public class FitnessClassService {
 
         checkClassOwnership(fitnessClass);
 
-        if(!fitnessClass.getTrainer().getEmail().equalsIgnoreCase(getCurrentUser().getEmail())
-                && getCurrentUser().getRole() == User.Role.TRAINER
-        ){
-            throw new ForbiddenException(
-                    "You are only allowed to cancel your own fitness classes"
-            );
-        }
-
         if (fitnessClass.getStatus() == FitnessClass.Status.COMPLETED
                 || fitnessClass.getStatus() == FitnessClass.Status.IN_PROGRESS) {
             throw new IllegalArgumentException(
