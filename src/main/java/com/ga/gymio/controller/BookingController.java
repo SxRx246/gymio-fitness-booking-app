@@ -12,24 +12,25 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/bookings")
 public class BookingController {
 
     private final BookingService bookingService;
 
-    @PostMapping("/fitness-classes/{fitnessClassId}")
+    @PostMapping("/fitness-class/{fitnessClassId}")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('CUSTOMER')")
     public Booking createBooking(@PathVariable Long fitnessClassId) {
         return bookingService.createBooking(fitnessClassId);
     }
 
-    @GetMapping("/bookings")
+    @GetMapping("/my")
     @PreAuthorize("hasRole('CUSTOMER')")
     public List<Booking> getMyBookings() {
         return bookingService.getMyBookings();
     }
 
-    @GetMapping("/bookings/{id}")
+    @GetMapping("/{id}")
     @PreAuthorize("hasRole('CUSTOMER')")
     public Booking getBooking(@PathVariable Long id) {
         return bookingService.getBooking(id);
@@ -38,14 +39,27 @@ public class BookingController {
     @PutMapping("/{id}/cancel")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('CUSTOMER')")
-    public void cancelBooking( @PathVariable Long id) {
+    public void cancelBooking(@PathVariable Long id) {
         bookingService.cancelBooking(id);
+    }
+
+    //    admin - trainer
+    @GetMapping("/fitness-class/{fitnessClassId}")
+    @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
+    public List<Booking> getBookingsByFitnessClass(@PathVariable Long fitnessClassId) {
+        return bookingService.getBookingsByFitnessClass(fitnessClassId);
+    }
+
+    //    admin
+    @GetMapping @PreAuthorize("hasRole('ADMIN')")
+    public List<Booking> getAllBookings() {
+        return bookingService.getAllBookings();
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
-    public void deleteBooking( @PathVariable Long id) {
+    public void deleteBooking(@PathVariable Long id) {
         bookingService.deleteBooking(id);
     }
 
