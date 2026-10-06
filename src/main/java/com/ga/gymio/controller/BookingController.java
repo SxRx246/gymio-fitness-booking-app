@@ -42,5 +42,11 @@ public class BookingController {
         bookingService.cancelBooking(id);
     }
 
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deleteBooking( @PathVariable Long id) {
+        bookingService.deleteBooking(id);
+    }
 
 }
