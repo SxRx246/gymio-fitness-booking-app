@@ -3,6 +3,7 @@ package com.ga.gymio.service;
 import com.ga.gymio.authentication.MyUserDetails;
 import com.ga.gymio.exception.ForbiddenException;
 import com.ga.gymio.exception.InformationNotFoundException;
+import com.ga.gymio.model.AuditLog;
 import com.ga.gymio.model.Booking;
 import com.ga.gymio.model.FitnessClass;
 import com.ga.gymio.model.User;
@@ -29,6 +30,7 @@ public class FitnessClassService {
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
     private final EmailService emailService;
+    private final AuditLogService auditLogService;
 
     private static final Logger logger = LoggerFactory.getLogger(FitnessClassService.class);
 
@@ -256,6 +258,36 @@ public class FitnessClassService {
 
         logger.info("Fitness class cancelled successfully with id {}", cancelledClass.getId());
     }
+
+
+    public void deleteFitnessClass(Long id) {
+
+        logger.info("Deleting fitness class with id {}", id);
+
+        FitnessClass fitnessClass =
+                fitnessClassRepository.findById(id)
+                        .orElseThrow(() ->
+                                new InformationNotFoundException(
+                                        "Fitness Class with id " + id + " not found"
+                                ));
+
+        User currentUser = getCurrentUser();
+
+        fitnessClassRepository.delete(fitnessClass);
+
+        auditLogService.log(
+                AuditLog.Action.DELETE_CLASS,
+                "Admin " + currentUser.getId()
+                        + " deleted Fitness Class " + id,
+                currentUser
+        );
+
+        logger.info(
+                "Fitness class {} deleted successfully",
+                id
+        );
+    }
+
 
     @Scheduled(fixedRate = 60000)
     @Transactional
