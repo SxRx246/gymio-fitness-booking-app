@@ -105,8 +105,7 @@ public class BookingService {
 
         auditLogService.log(
                 AuditLog.Action.BOOK_CLASS,
-        "User " + currentUser.getId() +
-                " booked Fitness Class " + fitnessClass.getId(),
+        "User " + currentUser.getId() + " booked Fitness Class " + fitnessClass.getId(),
                 currentUser );
 
         emailService.sendBookingConfirmationEmail(
@@ -270,6 +269,12 @@ public class BookingService {
         booking.setStatus(Booking.Status.CANCELLED);
 
         bookingRepository.save(booking);
+
+        auditLogService.log(
+                AuditLog.Action.CANCEL_BOOKING,
+       "User " + currentUser.getId() + " cancelled Booking " +
+                booking.getId(), currentUser
+        );
 
         emailService.sendBookingCancellationEmail(
                 booking.getCustomer().getEmail(),
