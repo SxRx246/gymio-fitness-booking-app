@@ -251,6 +251,12 @@ public class UserService {
         user.setPasswordResetTokenExpiresAt(null);
 
         userRepository.save(user);
+
+        auditLogService.log(
+                AuditLog.Action.RESET_PASSWORD,
+                "User " + user.getId() + " reset their password",
+                user
+        );
     }
 
     public void changePassword(ChangePasswordRequest request) {
