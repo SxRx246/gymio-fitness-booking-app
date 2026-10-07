@@ -21,7 +21,6 @@ public class AuditLog {
     private Long id;
 
     public enum Action {
-
         SIGNUP,
         VERIFY_EMAIL,
 

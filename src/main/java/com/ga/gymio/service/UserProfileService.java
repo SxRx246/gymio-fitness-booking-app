@@ -4,6 +4,7 @@ import com.ga.gymio.dto.request.ProfileRequest;
 import com.ga.gymio.dto.response.ProfileResponse;
 import com.ga.gymio.exception.InformationExistsException;
 import com.ga.gymio.exception.InformationNotFoundException;
+import com.ga.gymio.model.AuditLog;
 import com.ga.gymio.model.User;
 import com.ga.gymio.model.UserProfile;
 import com.ga.gymio.repository.UserProfileRepository;
@@ -26,6 +27,7 @@ public class UserProfileService {
 
     private final UserProfileRepository userProfileRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     private final String uploadDir = "profile-images/";
 
@@ -54,6 +56,12 @@ public class UserProfileService {
 
         UserProfile savedProfile =
                 userProfileRepository.save(profile);
+
+        auditLogService.log(
+                AuditLog.Action.CREATE_PROFILE,
+                "User " + user.getId() + " created their profile",
+                user
+        );
 
         return mapToResponse(savedProfile);
     }
@@ -99,6 +107,12 @@ public class UserProfileService {
 
         UserProfile updatedProfile =
                 userProfileRepository.save(profile);
+
+        auditLogService.log(
+                AuditLog.Action.UPDATE_PROFILE,
+                "User " + user.getId() + " updated their profile",
+                user
+        );
 
         return mapToResponse(updatedProfile);
     }
