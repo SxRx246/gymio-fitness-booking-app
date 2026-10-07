@@ -101,10 +101,20 @@ public class UserController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(
-            @Valid @RequestBody ForgotPasswordRequest request) {
+            @Valid @RequestBody ForgotPasswordRequest request, HttpServletRequest httpRequest) {
+
+        String ipAddress = httpRequest.getRemoteAddr();
 
         log.info("Password reset request received for email: {}",
                 request.getEmail());
+
+        if (!rateLimiterService.isAllowed(ipAddress)) {
+            log.warn("Password reset rate limit exceeded for IP: {}", ipAddress);
+
+            throw new TooManyRequestsException(
+                    "Too many password recovery attempts. Please try again later."
+            );
+        }
 
         userService.forgotPassword(request);
 
@@ -146,8 +156,6 @@ public class UserController {
                 "Password changed successfully."
         );
     }
-
-
 
 
 }
