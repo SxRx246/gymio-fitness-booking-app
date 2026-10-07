@@ -229,10 +229,30 @@ public class FitnessClassService {
             );
         }
 
+        List<Booking> confirmedBookings =
+                bookingRepository.findByFitnessClassIdAndStatus(
+                        fitnessClass.getId(),
+                        Booking.Status.CONFIRMED
+                );
 
         fitnessClass.setStatus(FitnessClass.Status.CANCELLED);
 
         FitnessClass cancelledClass = fitnessClassRepository.save(fitnessClass);
+
+        for (Booking booking : confirmedBookings) {
+            booking.setStatus(Booking.Status.CANCELLED);
+
+            emailService.sendFitnessClassCancellationEmail(
+                    booking.getCustomer().getEmail(),
+                    fitnessClass.getName(),
+                    fitnessClass.getStartTime().toString(),
+                    fitnessClass.getEndTime().toString()
+            );
+
+            logger.info( "Booking {} cancelled because fitness class {} was cancelled", booking.getId(), fitnessClass.getId() );
+        }
+
+        bookingRepository.saveAll(confirmedBookings);
 
         logger.info("Fitness class cancelled successfully with id {}", cancelledClass.getId());
     }
