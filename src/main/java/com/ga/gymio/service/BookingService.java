@@ -306,6 +306,8 @@ public class BookingService {
 
         logger.info("Admin deleting booking with id {}", id);
 
+        User currentUser = getCurrentUser();
+
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() ->
                         new InformationNotFoundException(
@@ -314,6 +316,12 @@ public class BookingService {
                 );
 
         bookingRepository.delete(booking);
+
+        auditLogService.log(
+                AuditLog.Action.DELETE_BOOKING,
+       "Admin " + currentUser.getId() + " delete Booking " + id ,
+                currentUser
+        );
 
         logger.info(
                 "Booking {} deleted successfully by admin",
