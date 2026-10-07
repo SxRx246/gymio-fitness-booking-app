@@ -213,7 +213,7 @@ public class BookingService {
                 .toList();
     }
 
-
+    @Transactional
     public void cancelBooking(Long id) {
 
         logger.info(
@@ -319,7 +319,7 @@ public class BookingService {
 
         auditLogService.log(
                 AuditLog.Action.DELETE_BOOKING,
-       "Admin " + currentUser.getId() + " delete Booking " + id ,
+       "Admin " + currentUser.getId() + " deleted Booking " + id ,
                 currentUser
         );
 
