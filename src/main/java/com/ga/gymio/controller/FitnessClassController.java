@@ -47,4 +47,11 @@ public class FitnessClassController {
     public void cancelFitnessClass(@PathVariable Long id){
         fitnessClassService.cancelFitnessClass(id);
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteFitnessClass(@PathVariable Long id) {
+        fitnessClassService.deleteFitnessClass(id);
+    }
 }
