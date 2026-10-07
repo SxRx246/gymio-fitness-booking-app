@@ -292,6 +292,12 @@ public class UserService {
         );
 
         userRepository.save(currentUser);
+
+        auditLogService.log(
+                AuditLog.Action.CHANGE_PASSWORD,
+                "User " + currentUser.getId() + " changed their password",
+                currentUser
+        );
     }
 
     public List<User> getAllUsers() {
