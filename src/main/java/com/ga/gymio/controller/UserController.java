@@ -1,7 +1,9 @@
 package com.ga.gymio.controller;
 
 import com.ga.gymio.dto.request.*;
-import com.ga.gymio.model.User;
+import com.ga.gymio.exception.TooManyRequestsException;
+import com.ga.gymio.service.RateLimiterService;
+import jakarta.servlet.http.HttpServletRequest;
 import com.ga.gymio.dto.response.LoginResponse;
 import com.ga.gymio.service.UserService;
 import jakarta.validation.Valid;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping(path = "/auth/users")
 public class UserController {
     private UserService userService;
+    private RateLimiterService rateLimiterService;
 
     @PostMapping("/register")
     public ResponseEntity<String> createUser(
@@ -29,9 +32,23 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> loginUser(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<LoginResponse> loginUser(
+            @Valid @RequestBody LoginRequest loginRequest,
+            HttpServletRequest request) {
+
+        String ipAddress = request.getRemoteAddr();
+
+        if (!rateLimiterService.isAllowed(ipAddress)) {
+            throw new TooManyRequestsException(
+                    "Too many login attempts. Please try again later."
+            );
+        }
+
         System.out.println("Controller Calling Login() ==>");
-        return ResponseEntity.ok(userService.loginUser(loginRequest));
+
+        return ResponseEntity.ok(
+                userService.loginUser(loginRequest)
+        );
     }
 
     @GetMapping("/verify")
