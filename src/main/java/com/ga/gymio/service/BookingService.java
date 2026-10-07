@@ -285,6 +285,13 @@ public class BookingService {
                 booking.getId(), currentUser
         );
 
+        notificationService.sendNotification(
+                booking.getCustomer().getId(),
+                "Booking #" + booking.getId()
+                        + " cancelled for Fitness Class "
+                        + fitnessClass.getName()
+        );
+
         emailService.sendBookingCancellationEmail(
                 booking.getCustomer().getEmail(),
                 fitnessClass.getName(),
