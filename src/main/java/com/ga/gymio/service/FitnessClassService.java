@@ -3,6 +3,7 @@ package com.ga.gymio.service;
 import com.ga.gymio.authentication.MyUserDetails;
 import com.ga.gymio.exception.ForbiddenException;
 import com.ga.gymio.exception.InformationNotFoundException;
+import com.ga.gymio.model.AuditLog;
 import com.ga.gymio.model.Booking;
 import com.ga.gymio.model.FitnessClass;
 import com.ga.gymio.model.User;
@@ -28,20 +29,12 @@ public class FitnessClassService {
     private final FitnessClassRepository fitnessClassRepository;
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
+    private final EmailService emailService;
+    private final AuditLogService auditLogService;
 
     private static final Logger logger = LoggerFactory.getLogger(FitnessClassService.class);
 
-    public FitnessClass createFitnessClass(FitnessClassRequest request) {
-        logger.info("Creating fitness class: {}", request.getName());
-
-        User trainer = userRepository
-                .findByEmail(request.getTrainerEmail())
-                .orElseThrow(() ->
-                        new InformationNotFoundException(
-                                "Trainer not found"
-                        )
-                );
-
+    public void validateTrainer(User trainer) {
         if (trainer.getRole() != User.Role.TRAINER) {
             throw new ForbiddenException(
                     "Selected user must have a trainer role");
@@ -56,6 +49,20 @@ public class FitnessClassService {
             throw new ForbiddenException(
                     "Trainer email is not verified");
         }
+    }
+
+    public FitnessClass createFitnessClass(FitnessClassRequest request) {
+        logger.info("Creating fitness class: {}", request.getName());
+
+        User trainer = userRepository
+                .findByEmail(request.getTrainerEmail())
+                .orElseThrow(() ->
+                        new InformationNotFoundException(
+                                "Trainer not found"
+                        )
+                );
+
+        validateTrainer(trainer);
 
         User currentUser = getCurrentUser();
 
@@ -86,6 +93,11 @@ public class FitnessClassService {
         fitnessClass.setTrainer(trainer);
 
         FitnessClass savedClass = fitnessClassRepository.save(fitnessClass);
+
+        auditLogService.log(
+                AuditLog.Action.CREATE_CLASS,
+                "User " + currentUser.getId() + " created Fitness Class " + savedClass.getId(),
+                currentUser);
 
         logger.info("Fitness class created successfully with id {}", savedClass.getId());
 
@@ -154,6 +166,8 @@ public class FitnessClassService {
     public FitnessClass updateFitnessClass(FitnessClassRequest request, Long id) {
         logger.info("Updating fitness class with id {}", id);
 
+        User currentUser = getCurrentUser();
+
         FitnessClass existingFitnessClass = fitnessClassRepository.findById(id).orElseThrow(
                 () -> new InformationNotFoundException(
                         "Fitness class with id " + id + " not found"
@@ -177,11 +191,12 @@ public class FitnessClassService {
             );
         }
 
-        if(getCurrentUser().getRole() == User.Role.ADMIN){
+        if (currentUser.getRole() == User.Role.ADMIN) {
             User trainer = userRepository.findByEmail(request.getTrainerEmail()).
                     orElseThrow(() -> new InformationNotFoundException(
                             "trainer with email " + request.getTrainerEmail() + " is not found"
                     ));
+            validateTrainer(trainer);
             existingFitnessClass.setTrainer(trainer);
         }
 
@@ -195,13 +210,21 @@ public class FitnessClassService {
 
         FitnessClass updatedClass = fitnessClassRepository.save(existingFitnessClass);
 
+        auditLogService.log(
+                AuditLog.Action.UPDATE_CLASS,
+                "User " + currentUser.getId() + " updated Fitness Class " + updatedClass.getId(),
+                currentUser);
+
         logger.info("Fitness class updated successfully with id {}", updatedClass.getId());
 
         return updatedClass;
     }
 
+    @Transactional
     public void cancelFitnessClass(Long id) {
         logger.info("Cancelling fitness class with id {}", id);
+
+        User currentUser = getCurrentUser();
 
         FitnessClass fitnessClass = fitnessClassRepository.findById(id).orElseThrow(() ->
                 new InformationNotFoundException(
@@ -223,10 +246,35 @@ public class FitnessClassService {
             );
         }
 
+        List<Booking> confirmedBookings =
+                bookingRepository.findByFitnessClassIdAndStatus(
+                        fitnessClass.getId(),
+                        Booking.Status.CONFIRMED
+                );
 
         fitnessClass.setStatus(FitnessClass.Status.CANCELLED);
 
         FitnessClass cancelledClass = fitnessClassRepository.save(fitnessClass);
+
+        auditLogService.log(
+                AuditLog.Action.CANCEL_CLASS,
+                "User " + currentUser.getId() + " cancelled Fitness Class " + cancelledClass.getId(),
+                currentUser);
+
+        for (Booking booking : confirmedBookings) {
+            booking.setStatus(Booking.Status.CANCELLED);
+
+            emailService.sendFitnessClassCancellationEmail(
+                    booking.getCustomer().getEmail(),
+                    fitnessClass.getName(),
+                    fitnessClass.getStartTime().toString(),
+                    fitnessClass.getEndTime().toString()
+            );
+
+            logger.info("Booking {} cancelled because fitness class {} was cancelled", booking.getId(), fitnessClass.getId());
+        }
+
+        bookingRepository.saveAll(confirmedBookings);
 
         logger.info("Fitness class cancelled successfully with id {}", cancelledClass.getId());
     }
@@ -251,6 +299,13 @@ public class FitnessClassService {
                 );
 
                 updateBookingStatuses(fitnessClass);
+
+                auditLogService.log(
+                        AuditLog.Action.COMPLETE_CLASS,
+                        "Fitness Class " + fitnessClass.getId()
+                                + " was completed",
+                        null
+                );
 
                 logger.info(
                         "Fitness class {} has been completed",
@@ -287,6 +342,13 @@ public class FitnessClassService {
                     FitnessClass.Status.COMPLETED
             );
 
+            auditLogService.log(
+                    AuditLog.Action.COMPLETE_CLASS,
+                    "Fitness Class " + fitnessClass.getId()
+                            + " was completed",
+                    null
+            );
+
             logger.info(
                     "Fitness class {} has been completed",
                     fitnessClass.getId()
@@ -305,9 +367,51 @@ public class FitnessClassService {
         for (Booking booking : confirmedBookings) {
             booking.setStatus(Booking.Status.COMPLETED);
 
-            logger.info( "Booking {} has been completed", booking.getId() ); }
+            auditLogService.log(
+                    AuditLog.Action.COMPLETE_BOOKING,
+                    "Booking " + booking.getId() + " was completed",
+                    null
+            );
+
+            emailService.sendBookingStatusChangeEmail(
+                    booking.getCustomer().getEmail(),
+                    fitnessClass.getName(),
+                    fitnessClass.getStartTime().toString(),
+                    fitnessClass.getEndTime().toString()
+            );
+
+            logger.info("Booking {} has been completed", booking.getId());
+        }
 
         bookingRepository.saveAll(confirmedBookings);
+    }
+
+    public void deleteFitnessClass(Long id) {
+
+        logger.info("Deleting fitness class with id {}", id);
+
+        FitnessClass fitnessClass =
+                fitnessClassRepository.findById(id)
+                        .orElseThrow(() ->
+                                new InformationNotFoundException(
+                                        "Fitness Class with id " + id + " not found"
+                                ));
+
+        User currentUser = getCurrentUser();
+
+        fitnessClassRepository.delete(fitnessClass);
+
+        auditLogService.log(
+                AuditLog.Action.DELETE_CLASS,
+                "Admin " + currentUser.getId()
+                        + " deleted Fitness Class " + id,
+                currentUser
+        );
+
+        logger.info(
+                "Fitness class {} deleted successfully",
+                id
+        );
     }
 
 }

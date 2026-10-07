@@ -1,14 +1,14 @@
 package com.ga.gymio.controller;
 
-import com.ga.gymio.dto.request.RegisterRequest;
+import com.ga.gymio.dto.request.*;
 import com.ga.gymio.model.User;
-import com.ga.gymio.dto.request.LoginRequest;
 import com.ga.gymio.dto.response.LoginResponse;
 import com.ga.gymio.service.UserService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -51,5 +51,42 @@ public class UserController {
                 "A new verification email has been sent."
         );
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+
+        userService.forgotPassword(request);
+
+        return ResponseEntity.ok(
+                "If an account exists with this email, a password reset link has been sent."
+        );
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+
+        userService.resetPassword(request);
+
+        return ResponseEntity.ok(
+                "Password has been reset successfully. You can now log in."
+        );
+    }
+
+    @PutMapping("/change-password")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<String> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request) {
+
+        userService.changePassword(request);
+
+        return ResponseEntity.ok(
+                "Password changed successfully."
+        );
+    }
+
+
+
 
 }

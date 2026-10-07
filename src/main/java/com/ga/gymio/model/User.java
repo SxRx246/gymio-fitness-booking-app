@@ -55,6 +55,12 @@ public class User {
 
     private boolean emailVerified;
 
+    @JsonIgnore
+    private String passwordResetToken;
+
+    @JsonIgnore
+    private LocalDateTime passwordResetTokenExpiresAt;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

@@ -22,22 +22,38 @@ public class AuditLog {
 
     public enum Action {
         SIGNUP,
-        LOGIN,
-        LOGOUT,
+        VERIFY_EMAIL,
+
+        RESET_PASSWORD,
+        CHANGE_PASSWORD,
+
+        CREATE_PROFILE,
+        UPDATE_PROFILE,
+
         CREATE_CLASS,
         UPDATE_CLASS,
-        DELETE_CLASS,
         CANCEL_CLASS,
+        DELETE_CLASS,
+
         BOOK_CLASS,
-        CANCEL_BOOKING
+        CANCEL_BOOKING,
+        DELETE_BOOKING,
+
+        UPDATE_USER,
+
+        COMPLETE_CLASS,
+        COMPLETE_BOOKING
     }
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private Action action;
 
     @Lob
+    @Column(nullable = false)
     private String description;
 
     @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @ManyToOne
