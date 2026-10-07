@@ -4,6 +4,7 @@ import com.ga.gymio.authentication.JWTUtils;
 import com.ga.gymio.authentication.MyUserDetails;
 import com.ga.gymio.dto.request.*;
 import com.ga.gymio.exception.*;
+import com.ga.gymio.model.AuditLog;
 import com.ga.gymio.model.User;
 import com.ga.gymio.dto.response.LoginResponse;
 import com.ga.gymio.repository.UserRepository;
@@ -33,6 +34,7 @@ public class UserService {
     private final JWTUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
+    private final AuditLogService auditLogService;
 
     public void createUser(RegisterRequest request) {
         String email = request.getEmail().trim().toLowerCase();
@@ -66,6 +68,12 @@ public class UserService {
         );
 
         User savedUser = userRepository.save(user);
+
+        auditLogService.log(
+                AuditLog.Action.SIGNUP,
+                "User " + savedUser.getId() + " signed up",
+                savedUser
+        );
 
         emailService.sendVerificationEmail(
                 savedUser.getEmail(),
@@ -104,6 +112,12 @@ public class UserService {
         user.setVerificationTokenExpiresAt(null);
 
         userRepository.save(user);
+
+        auditLogService.log(
+                AuditLog.Action.VERIFY_EMAIL,
+                "User " + user.getId() + " verified their email",
+                user
+        );
     }
 
     public void resendVerificationEmail(String email) throws UsernameNotFoundException {
@@ -237,10 +251,15 @@ public class UserService {
         user.setPasswordResetTokenExpiresAt(null);
 
         userRepository.save(user);
+
+        auditLogService.log(
+                AuditLog.Action.RESET_PASSWORD,
+                "User " + user.getId() + " reset their password",
+                user
+        );
     }
 
-    public void changePassword(ChangePasswordRequest request) {
-
+    public User getCurrentUser(){
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
 
@@ -248,6 +267,13 @@ public class UserService {
                 (MyUserDetails) authentication.getPrincipal();
 
         User currentUser = myUserDetails.getUser();
+
+        return currentUser;
+    }
+
+    public void changePassword(ChangePasswordRequest request) {
+
+        User currentUser = getCurrentUser();
 
         if (!passwordEncoder.matches(
                 request.getCurrentPassword(),
@@ -272,6 +298,12 @@ public class UserService {
         );
 
         userRepository.save(currentUser);
+
+        auditLogService.log(
+                AuditLog.Action.CHANGE_PASSWORD,
+                "User " + currentUser.getId() + " changed their password",
+                currentUser
+        );
     }
 
     public List<User> getAllUsers() {
@@ -294,6 +326,14 @@ public class UserService {
         }
 
         userRepository.save(user);
+
+        User currentUser = getCurrentUser();
+
+        auditLogService.log(
+                AuditLog.Action.UPDATE_USER,
+                "Admin " + currentUser.getId() + " updated User " + user.getId(),
+                currentUser
+        );
     }
 
 }
