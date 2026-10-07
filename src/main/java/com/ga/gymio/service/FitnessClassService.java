@@ -223,6 +223,8 @@ public class FitnessClassService {
     public void cancelFitnessClass(Long id) {
         logger.info("Cancelling fitness class with id {}", id);
 
+        User currentUser = getCurrentUser();
+
         FitnessClass fitnessClass = fitnessClassRepository.findById(id).orElseThrow(() ->
                 new InformationNotFoundException(
                         "Fitness Class with id " + id + " not found"
@@ -252,8 +254,6 @@ public class FitnessClassService {
         fitnessClass.setStatus(FitnessClass.Status.CANCELLED);
 
         FitnessClass cancelledClass = fitnessClassRepository.save(fitnessClass);
-
-        User currentUser = getCurrentUser();
 
         auditLogService.log(
                 AuditLog.Action.CANCEL_CLASS,
@@ -299,6 +299,13 @@ public class FitnessClassService {
 
                 updateBookingStatuses(fitnessClass);
 
+                auditLogService.log(
+                        AuditLog.Action.COMPLETE_CLASS,
+                        "Fitness Class " + fitnessClass.getId()
+                                + " was completed",
+                        null
+                );
+
                 logger.info(
                         "Fitness class {} has been completed",
                         fitnessClass.getId()
@@ -334,6 +341,13 @@ public class FitnessClassService {
                     FitnessClass.Status.COMPLETED
             );
 
+            auditLogService.log(
+                    AuditLog.Action.COMPLETE_CLASS,
+                    "Fitness Class " + fitnessClass.getId()
+                            + " was completed",
+                    null
+            );
+
             logger.info(
                     "Fitness class {} has been completed",
                     fitnessClass.getId()
@@ -351,6 +365,12 @@ public class FitnessClassService {
                 );
         for (Booking booking : confirmedBookings) {
             booking.setStatus(Booking.Status.COMPLETED);
+
+            auditLogService.log(
+                    AuditLog.Action.COMPLETE_BOOKING,
+                    "Booking " + booking.getId() + " was completed",
+                    null
+            );
 
             emailService.sendBookingStatusChangeEmail(
                     booking.getCustomer().getEmail(),
