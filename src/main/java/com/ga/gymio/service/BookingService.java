@@ -263,6 +263,13 @@ public class BookingService {
 
         bookingRepository.save(booking);
 
+        emailService.sendBookingCancellationEmail(
+                booking.getCustomer().getEmail(),
+                fitnessClass.getName(),
+                fitnessClass.getStartTime().toString(),
+                fitnessClass.getEndTime().toString()
+        );
+
         logger.info(
                 "Booking {} cancelled successfully",
                 booking.getId()
