@@ -41,6 +41,21 @@ public class FitnessClassController {
         return fitnessClassService.getFitnessClasses(trainerId, pageable);
     }
 
+    @GetMapping
+    public Page<FitnessClass> searchFitnessClasses(
+            @RequestParam(required = false) FitnessClass.Type type,
+            @RequestParam(required = false) FitnessClass.Level level,
+            @RequestParam(required = false) FitnessClass.Status status,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        return fitnessClassService.searchFitnessClasses(
+                type,
+                level,
+                status,
+                pageable
+        );
+    }
+
     @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
     @PutMapping("/{id}")
     public FitnessClass updateFitnessClass(@Valid @RequestBody FitnessClassRequest fitnessClassRequest, @PathVariable Long id){
