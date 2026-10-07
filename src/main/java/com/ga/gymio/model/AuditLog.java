@@ -48,7 +48,7 @@ public class AuditLog {
     @Column(nullable = false)
     private Action action;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
     @CreationTimestamp
