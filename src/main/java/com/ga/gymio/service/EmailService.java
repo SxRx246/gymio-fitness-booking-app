@@ -5,6 +5,9 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 @Service
 @RequiredArgsConstructor
 public class EmailService {
@@ -33,6 +36,12 @@ public class EmailService {
         mailSender.send(message);
     }
     public void sendBookingConfirmationEmail( String email, String className, String startTime, String endTime ) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMMM yyyy 'at' h:mm a");
+
+        String formattedStartTime = LocalDateTime.parse(startTime).format(formatter);
+
+        String formattedEndTime = LocalDateTime.parse(endTime).format(formatter);
+
         SimpleMailMessage message = new SimpleMailMessage();
 
         message.setTo(email);
@@ -42,8 +51,8 @@ public class EmailService {
         message.setText(
                 "Hello!\n\n" + "Your booking has been confirmed.\n\n" +
                 "Class: " + className + "\n" +
-                "Start time: " + startTime + "\n" +
-                "End time: " + endTime + "\n\n" +
+                "Start time: " + formattedStartTime + "\n" +
+                "End time: " + formattedEndTime + "\n\n" +
                 "We look forward to seeing you at Gymio!\n\n" + "Thank you." );
 
         mailSender.send(message);
