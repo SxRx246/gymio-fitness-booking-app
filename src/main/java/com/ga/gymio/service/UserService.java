@@ -259,8 +259,7 @@ public class UserService {
         );
     }
 
-    public void changePassword(ChangePasswordRequest request) {
-
+    public User getCurrentUser(){
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
 
@@ -268,6 +267,13 @@ public class UserService {
                 (MyUserDetails) authentication.getPrincipal();
 
         User currentUser = myUserDetails.getUser();
+
+        return currentUser;
+    }
+
+    public void changePassword(ChangePasswordRequest request) {
+
+        User currentUser = getCurrentUser();
 
         if (!passwordEncoder.matches(
                 request.getCurrentPassword(),
@@ -320,6 +326,14 @@ public class UserService {
         }
 
         userRepository.save(user);
+
+        User currentUser = getCurrentUser();
+
+        auditLogService.log(
+                AuditLog.Action.UPDATE_USER,
+                "Admin " + currentUser.getId() + " updated User " + user.getId(),
+                currentUser
+        );
     }
 
 }
