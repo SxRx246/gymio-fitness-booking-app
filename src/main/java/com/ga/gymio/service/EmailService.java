@@ -58,4 +58,40 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    public void sendBookingCancellationEmail(
+            String email,
+            String className,
+            String startTime,
+            String endTime
+    ) {
+
+        DateTimeFormatter formatter =
+                DateTimeFormatter.ofPattern("dd MMMM yyyy 'at' h:mm a");
+
+        String formattedStartTime =
+                LocalDateTime.parse(startTime).format(formatter);
+
+        String formattedEndTime =
+                LocalDateTime.parse(endTime).format(formatter);
+
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        message.setTo(email);
+
+        message.setSubject("Gymio booking cancelled");
+
+        message.setText(
+                "Hello!\n\n" +
+                        "Your booking has been cancelled.\n\n" +
+                        "Class: " + className + "\n" +
+                        "Start time: " + formattedStartTime + "\n" +
+                        "End time: " + formattedEndTime + "\n\n" +
+                        "If you did not request this cancellation, please contact Gymio.\n\n" +
+                        "Thank you."
+        );
+
+        mailSender.send(message);
+    }
+
+
 }
