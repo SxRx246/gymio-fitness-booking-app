@@ -28,6 +28,7 @@ public class FitnessClassService {
     private final FitnessClassRepository fitnessClassRepository;
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
+    private final EmailService emailService;
 
     private static final Logger logger = LoggerFactory.getLogger(FitnessClassService.class);
 
@@ -309,6 +310,13 @@ public class FitnessClassService {
                 );
         for (Booking booking : confirmedBookings) {
             booking.setStatus(Booking.Status.COMPLETED);
+
+            emailService.sendBookingStatusChangeEmail(
+                    booking.getCustomer().getEmail(),
+                    fitnessClass.getName(),
+                    fitnessClass.getStartTime().toString(),
+                    fitnessClass.getEndTime().toString()
+            );
 
             logger.info( "Booking {} has been completed", booking.getId() ); }
 
