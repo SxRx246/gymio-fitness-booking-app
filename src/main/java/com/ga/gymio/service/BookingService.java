@@ -27,6 +27,7 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final FitnessClassRepository fitnessClassRepository;
+    private final EmailService emailService;
 
     private static final Logger logger =
             LoggerFactory.getLogger(BookingService.class);
@@ -99,6 +100,13 @@ public class BookingService {
         booking.setStatus(Booking.Status.CONFIRMED);
 
         Booking savedBooking = bookingRepository.save(booking);
+
+        emailService.sendBookingConfirmationEmail(
+                currentUser.getEmail(),
+                fitnessClass.getName(),
+                fitnessClass.getStartTime().toString(),
+                fitnessClass.getEndTime().toString()
+        );
 
         logger.info(
                 "Booking created successfully with id {}",
