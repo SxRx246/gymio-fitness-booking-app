@@ -4,6 +4,9 @@ import com.ga.gymio.dto.response.BookingResponse;
 import com.ga.gymio.model.Booking;
 import com.ga.gymio.service.BookingService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -24,11 +27,12 @@ public class BookingController {
     public BookingResponse createBooking(@PathVariable Long fitnessClassId) {
         return bookingService.createBooking(fitnessClassId);
     }
-
     @GetMapping("/my")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public List<BookingResponse> getMyBookings() {
-        return bookingService.getMyBookings();
+    public Page<BookingResponse> getMyBookings(
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        return bookingService.getMyBookings(pageable);
     }
 
     @GetMapping("/{id}")

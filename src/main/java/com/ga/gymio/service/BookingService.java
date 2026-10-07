@@ -14,6 +14,8 @@ import com.ga.gymio.repository.FitnessClassRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -123,7 +125,7 @@ public class BookingService {
         return new BookingResponse(savedBooking);
     }
 
-    public List<BookingResponse> getMyBookings() {
+    public Page<BookingResponse> getMyBookings(Pageable pageable) {
 
         User currentUser = getCurrentUser();
 
@@ -133,10 +135,9 @@ public class BookingService {
         );
 
         return bookingRepository.findByCustomerId(
-                        currentUser.getId()
-                ).stream()
-                .map(BookingResponse::new)
-                .toList();
+                currentUser.getId(),
+                pageable
+        ).map(BookingResponse::new);
     }
 
     public BookingResponse getBooking(Long id) {
