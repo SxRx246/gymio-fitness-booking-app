@@ -5,6 +5,7 @@ import com.ga.gymio.dto.response.BookingResponse;
 import com.ga.gymio.exception.ForbiddenException;
 import com.ga.gymio.exception.InformationExistsException;
 import com.ga.gymio.exception.InformationNotFoundException;
+import com.ga.gymio.model.AuditLog;
 import com.ga.gymio.model.Booking;
 import com.ga.gymio.model.FitnessClass;
 import com.ga.gymio.model.User;
@@ -28,6 +29,7 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final FitnessClassRepository fitnessClassRepository;
     private final EmailService emailService;
+    private final AuditLogService auditLogService;
 
     private static final Logger logger =
             LoggerFactory.getLogger(BookingService.class);
@@ -100,6 +102,12 @@ public class BookingService {
         booking.setStatus(Booking.Status.CONFIRMED);
 
         Booking savedBooking = bookingRepository.save(booking);
+
+        auditLogService.log(
+                AuditLog.Action.BOOK_CLASS,
+        "User " + currentUser.getId() +
+                " booked Fitness Class " + fitnessClass.getId(),
+                currentUser );
 
         emailService.sendBookingConfirmationEmail(
                 currentUser.getEmail(),
