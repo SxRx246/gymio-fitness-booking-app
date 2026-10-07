@@ -1,10 +1,7 @@
 package com.ga.gymio.controller;
 
-import com.ga.gymio.dto.request.ForgotPasswordRequest;
-import com.ga.gymio.dto.request.RegisterRequest;
-import com.ga.gymio.dto.request.ResetPasswordRequest;
+import com.ga.gymio.dto.request.*;
 import com.ga.gymio.model.User;
-import com.ga.gymio.dto.request.LoginRequest;
 import com.ga.gymio.dto.response.LoginResponse;
 import com.ga.gymio.service.UserService;
 import jakarta.validation.Valid;
@@ -75,6 +72,19 @@ public class UserController {
                 "Password has been reset successfully. You can now log in."
         );
     }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<String> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request) {
+
+        userService.changePassword(request);
+
+        return ResponseEntity.ok(
+                "Password changed successfully."
+        );
+    }
+
+
 
 
 }
