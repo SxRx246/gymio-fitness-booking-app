@@ -34,7 +34,7 @@ public class FitnessClassService {
 
     private static final Logger logger = LoggerFactory.getLogger(FitnessClassService.class);
 
-    public void validateTrainer (User trainer){
+    public void validateTrainer(User trainer) {
         if (trainer.getRole() != User.Role.TRAINER) {
             throw new ForbiddenException(
                     "Selected user must have a trainer role");
@@ -97,7 +97,7 @@ public class FitnessClassService {
         auditLogService.log(
                 AuditLog.Action.CREATE_CLASS,
                 "User " + currentUser.getId() + " created Fitness Class " + savedClass.getId(),
-                currentUser );
+                currentUser);
 
         logger.info("Fitness class created successfully with id {}", savedClass.getId());
 
@@ -191,7 +191,7 @@ public class FitnessClassService {
             );
         }
 
-        if(currentUser.getRole() == User.Role.ADMIN){
+        if (currentUser.getRole() == User.Role.ADMIN) {
             User trainer = userRepository.findByEmail(request.getTrainerEmail()).
                     orElseThrow(() -> new InformationNotFoundException(
                             "trainer with email " + request.getTrainerEmail() + " is not found"
@@ -213,7 +213,7 @@ public class FitnessClassService {
         auditLogService.log(
                 AuditLog.Action.UPDATE_CLASS,
                 "User " + currentUser.getId() + " updated Fitness Class " + updatedClass.getId(),
-                currentUser );
+                currentUser);
 
         logger.info("Fitness class updated successfully with id {}", updatedClass.getId());
 
@@ -259,7 +259,7 @@ public class FitnessClassService {
         auditLogService.log(
                 AuditLog.Action.CANCEL_CLASS,
                 "User " + currentUser.getId() + " cancelled Fitness Class " + cancelledClass.getId(),
-                currentUser );
+                currentUser);
 
         for (Booking booking : confirmedBookings) {
             booking.setStatus(Booking.Status.CANCELLED);
@@ -271,7 +271,7 @@ public class FitnessClassService {
                     fitnessClass.getEndTime().toString()
             );
 
-            logger.info( "Booking {} cancelled because fitness class {} was cancelled", booking.getId(), fitnessClass.getId() );
+            logger.info("Booking {} cancelled because fitness class {} was cancelled", booking.getId(), fitnessClass.getId());
         }
 
         bookingRepository.saveAll(confirmedBookings);
@@ -380,9 +380,38 @@ public class FitnessClassService {
                     fitnessClass.getEndTime().toString()
             );
 
-            logger.info( "Booking {} has been completed", booking.getId() ); }
+            logger.info("Booking {} has been completed", booking.getId());
+        }
 
         bookingRepository.saveAll(confirmedBookings);
+    }
+
+    public void deleteFitnessClass(Long id) {
+
+        logger.info("Deleting fitness class with id {}", id);
+
+        FitnessClass fitnessClass =
+                fitnessClassRepository.findById(id)
+                        .orElseThrow(() ->
+                                new InformationNotFoundException(
+                                        "Fitness Class with id " + id + " not found"
+                                ));
+
+        User currentUser = getCurrentUser();
+
+        fitnessClassRepository.delete(fitnessClass);
+
+        auditLogService.log(
+                AuditLog.Action.DELETE_CLASS,
+                "Admin " + currentUser.getId()
+                        + " deleted Fitness Class " + id,
+                currentUser
+        );
+
+        logger.info(
+                "Fitness class {} deleted successfully",
+                id
+        );
     }
 
 }
