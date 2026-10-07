@@ -5,6 +5,9 @@ import com.ga.gymio.model.FitnessClass;
 import com.ga.gymio.service.FitnessClassService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -31,8 +34,11 @@ public class FitnessClassController {
     }
 
     @GetMapping("/trainer/{trainerId}")
-    public List<FitnessClass> getFitnessClasses(@PathVariable Long trainerId){
-        return fitnessClassService.getFitnessClasses(trainerId);
+    public Page<FitnessClass> getFitnessClasses(
+            @PathVariable Long trainerId,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        return fitnessClassService.getFitnessClasses(trainerId, pageable);
     }
 
     @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")

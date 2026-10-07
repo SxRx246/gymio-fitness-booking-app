@@ -13,6 +13,8 @@ import com.ga.gymio.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -113,7 +115,7 @@ public class FitnessClassService {
         );
     }
 
-    public List<FitnessClass> getFitnessClasses(Long trainerId) {
+    public Page<FitnessClass> getFitnessClasses(Long trainerId, Pageable pageable) {
         logger.info("Retrieving fitness classes of trainer {}", trainerId);
 
         User trainer = userRepository.findById(trainerId)
@@ -130,7 +132,7 @@ public class FitnessClassService {
         }
 
 
-        return fitnessClassRepository.findByTrainer(trainer);
+        return fitnessClassRepository.findByTrainer(trainer, pageable);
     }
 
     private User getCurrentUser() {
