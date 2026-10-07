@@ -23,11 +23,8 @@ public class AuditLog {
     public enum Action {
 
         SIGNUP,
-        LOGIN,
         VERIFY_EMAIL,
-        RESEND_VERIFICATION,
 
-        FORGOT_PASSWORD,
         RESET_PASSWORD,
         CHANGE_PASSWORD,
 
@@ -44,7 +41,6 @@ public class AuditLog {
         DELETE_BOOKING,
 
         UPDATE_USER,
-        DEACTIVATE_USER,
 
         COMPLETE_CLASS,
         COMPLETE_BOOKING
