@@ -234,6 +234,22 @@ public class FitnessClassService {
 
         FitnessClass updatedClass = fitnessClassRepository.save(existingFitnessClass);
 
+        List<Booking> confirmedBookings =
+                bookingRepository.findByFitnessClassIdAndStatus(
+                        updatedClass.getId(),
+                        Booking.Status.CONFIRMED
+                );
+
+        for (Booking booking : confirmedBookings) {
+
+            notificationService.sendNotification(
+                    booking.getCustomer().getId(),
+                    "Fitness Class "
+                            + updatedClass.getName()
+                            + " has been updated"
+            );
+        }
+
         auditLogService.log(
                 AuditLog.Action.UPDATE_CLASS,
                 "User " + currentUser.getId() + " updated Fitness Class " + updatedClass.getId(),
