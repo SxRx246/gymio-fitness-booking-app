@@ -32,4 +32,21 @@ public class EmailService {
 
         mailSender.send(message);
     }
+    public void sendBookingConfirmationEmail( String email, String className, String startTime, String endTime ) {
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        message.setTo(email);
+
+        message.setSubject("Gymio booking confirmed");
+
+        message.setText(
+                "Hello!\n\n" + "Your booking has been confirmed.\n\n" +
+                "Class: " + className + "\n" +
+                "Start time: " + startTime + "\n" +
+                "End time: " + endTime + "\n\n" +
+                "We look forward to seeing you at Gymio!\n\n" + "Thank you." );
+
+        mailSender.send(message);
+    }
+
 }
