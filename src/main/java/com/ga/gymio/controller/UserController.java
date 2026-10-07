@@ -1,6 +1,8 @@
 package com.ga.gymio.controller;
 
+import com.ga.gymio.dto.request.ForgotPasswordRequest;
 import com.ga.gymio.dto.request.RegisterRequest;
+import com.ga.gymio.dto.request.ResetPasswordRequest;
 import com.ga.gymio.model.User;
 import com.ga.gymio.dto.request.LoginRequest;
 import com.ga.gymio.dto.response.LoginResponse;
@@ -51,5 +53,28 @@ public class UserController {
                 "A new verification email has been sent."
         );
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+
+        userService.forgotPassword(request);
+
+        return ResponseEntity.ok(
+                "If an account exists with this email, a password reset link has been sent."
+        );
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+
+        userService.resetPassword(request);
+
+        return ResponseEntity.ok(
+                "Password has been reset successfully. You can now log in."
+        );
+    }
+
 
 }
