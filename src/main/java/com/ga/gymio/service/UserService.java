@@ -4,6 +4,7 @@ import com.ga.gymio.authentication.JWTUtils;
 import com.ga.gymio.authentication.MyUserDetails;
 import com.ga.gymio.dto.request.*;
 import com.ga.gymio.exception.*;
+import com.ga.gymio.model.AuditLog;
 import com.ga.gymio.model.User;
 import com.ga.gymio.dto.response.LoginResponse;
 import com.ga.gymio.repository.UserRepository;
@@ -33,6 +34,7 @@ public class UserService {
     private final JWTUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
+    private final AuditLogService auditLogService;
 
     public void createUser(RegisterRequest request) {
         String email = request.getEmail().trim().toLowerCase();
@@ -66,6 +68,12 @@ public class UserService {
         );
 
         User savedUser = userRepository.save(user);
+
+        auditLogService.log(
+                AuditLog.Action.SIGNUP,
+                "User " + savedUser.getId() + " signed up",
+                savedUser
+        );
 
         emailService.sendVerificationEmail(
                 savedUser.getEmail(),

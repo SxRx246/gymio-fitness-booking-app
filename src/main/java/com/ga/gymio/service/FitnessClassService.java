@@ -220,6 +220,7 @@ public class FitnessClassService {
         return updatedClass;
     }
 
+    @Transactional
     public void cancelFitnessClass(Long id) {
         logger.info("Cancelling fitness class with id {}", id);
 
