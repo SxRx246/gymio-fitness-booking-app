@@ -166,6 +166,8 @@ public class FitnessClassService {
     public FitnessClass updateFitnessClass(FitnessClassRequest request, Long id) {
         logger.info("Updating fitness class with id {}", id);
 
+        User currentUser = getCurrentUser();
+
         FitnessClass existingFitnessClass = fitnessClassRepository.findById(id).orElseThrow(
                 () -> new InformationNotFoundException(
                         "Fitness class with id " + id + " not found"
@@ -189,7 +191,7 @@ public class FitnessClassService {
             );
         }
 
-        if(getCurrentUser().getRole() == User.Role.ADMIN){
+        if(currentUser.getRole() == User.Role.ADMIN){
             User trainer = userRepository.findByEmail(request.getTrainerEmail()).
                     orElseThrow(() -> new InformationNotFoundException(
                             "trainer with email " + request.getTrainerEmail() + " is not found"
@@ -207,6 +209,11 @@ public class FitnessClassService {
         existingFitnessClass.setType(request.getType());
 
         FitnessClass updatedClass = fitnessClassRepository.save(existingFitnessClass);
+
+        auditLogService.log(
+                AuditLog.Action.UPDATE_CLASS,
+                "User " + currentUser.getId() + " updated Fitness Class " + updatedClass.getId(),
+                currentUser );
 
         logger.info("Fitness class updated successfully with id {}", updatedClass.getId());
 
