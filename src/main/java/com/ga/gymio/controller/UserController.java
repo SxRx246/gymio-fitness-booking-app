@@ -24,10 +24,20 @@ public class UserController {
 
     @PostMapping("/register")
     public ResponseEntity<String> createUser(
-            @Valid @RequestBody RegisterRequest registerRequest) {
+            @Valid @RequestBody RegisterRequest registerRequest, HttpServletRequest request) {
+
+        String ipAddress = request.getRemoteAddr();
 
         log.info("Registration request received for email: {}",
                 registerRequest.getEmail());
+
+        if (!rateLimiterService.isAllowed(ipAddress)) {
+            log.warn("Registration rate limit exceeded for IP: {}", ipAddress);
+
+            throw new TooManyRequestsException(
+                    "Too many registration attempts. Please try again later."
+            );
+        }
 
         userService.createUser(registerRequest);
 
@@ -54,12 +64,12 @@ public class UserController {
             );
         }
 
+        LoginResponse response = userService.loginUser(loginRequest);
+
         log.info("Login request processed successfully for IP: {}",
                 ipAddress);
 
-        return ResponseEntity.ok(
-                userService.loginUser(loginRequest)
-        );
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/verify")
