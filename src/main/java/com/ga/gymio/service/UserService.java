@@ -112,6 +112,12 @@ public class UserService {
         user.setVerificationTokenExpiresAt(null);
 
         userRepository.save(user);
+
+        auditLogService.log(
+                AuditLog.Action.VERIFY_EMAIL,
+                "User " + user.getId() + " verified their email",
+                user
+        );
     }
 
     public void resendVerificationEmail(String email) throws UsernameNotFoundException {
