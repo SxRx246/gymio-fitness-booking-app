@@ -253,6 +253,13 @@ public class FitnessClassService {
 
         FitnessClass cancelledClass = fitnessClassRepository.save(fitnessClass);
 
+        User currentUser = getCurrentUser();
+
+        auditLogService.log(
+                AuditLog.Action.CANCEL_CLASS,
+                "User " + currentUser.getId() + " cancelled Fitness Class " + cancelledClass.getId(),
+                currentUser );
+
         for (Booking booking : confirmedBookings) {
             booking.setStatus(Booking.Status.CANCELLED);
 
