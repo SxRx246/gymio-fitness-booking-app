@@ -253,7 +253,7 @@ public class UserService {
                 request.getCurrentPassword(),
                 currentUser.getPassword())) {
 
-            throw new ForbiddenException(
+            throw new IllegalArgumentException(
                     "Current password is incorrect"
             );
         }
