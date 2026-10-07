@@ -239,6 +239,41 @@ public class UserService {
         userRepository.save(user);
     }
 
+    public void changePassword(ChangePasswordRequest request) {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        MyUserDetails myUserDetails =
+                (MyUserDetails) authentication.getPrincipal();
+
+        User currentUser = myUserDetails.getUser();
+
+        if (!passwordEncoder.matches(
+                request.getCurrentPassword(),
+                currentUser.getPassword())) {
+
+            throw new ForbiddenException(
+                    "Current password is incorrect"
+            );
+        }
+
+        if (passwordEncoder.matches(
+                request.getNewPassword(),
+                currentUser.getPassword())) {
+
+            throw new IllegalArgumentException(
+                    "New password must be different from your current password"
+            );
+        }
+
+        currentUser.setPassword(
+                passwordEncoder.encode(request.getNewPassword())
+        );
+
+        userRepository.save(currentUser);
+    }
+
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
