@@ -35,6 +35,34 @@ public class EmailService {
 
         mailSender.send(message);
     }
+
+    public void sendPasswordResetEmail(
+            String email,
+            String token
+    ) {
+
+        String resetLink =
+                "http://localhost:8080/auth/users/reset-password?token=" + token;
+
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        message.setTo(email);
+
+        message.setSubject("Reset your Gymio password");
+
+        message.setText(
+                "Hello!\n\n" +
+                        "We received a request to reset your Gymio password.\n\n" +
+                        "Click the link below to reset your password:\n\n" +
+                        resetLink + "\n\n" +
+                        "This link is valid for 15 minutes.\n\n" +
+                        "If you did not request a password reset, please ignore this email.\n\n" +
+                        "Thank you."
+        );
+
+        mailSender.send(message);
+    }
+
     public void sendBookingConfirmationEmail( String email, String className, String startTime, String endTime ) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMMM yyyy 'at' h:mm a");
 
@@ -162,7 +190,5 @@ public class EmailService {
 
         mailSender.send(message);
     }
-
-
 
 }
