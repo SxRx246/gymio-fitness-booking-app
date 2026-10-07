@@ -135,6 +135,27 @@ public class FitnessClassService {
         return fitnessClassRepository.findByTrainer(trainer, pageable);
     }
 
+    public Page<FitnessClass> searchFitnessClasses(
+            FitnessClass.Type type,
+            FitnessClass.Level level,
+            FitnessClass.Status status,
+            Pageable pageable
+    ) {
+        logger.info(
+                "Searching fitness classes with type={}, level={}, status={}",
+                type,
+                level,
+                status
+        );
+
+        return fitnessClassRepository.findByFilters(
+                type,
+                level,
+                status,
+                pageable
+        );
+    }
+
     private User getCurrentUser() {
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
