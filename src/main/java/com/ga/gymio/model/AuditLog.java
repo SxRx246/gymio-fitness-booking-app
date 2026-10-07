@@ -48,7 +48,6 @@ public class AuditLog {
     @Column(nullable = false)
     private Action action;
 
-    @Lob
     @Column(nullable = false)
     private String description;
 
