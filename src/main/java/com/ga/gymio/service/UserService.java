@@ -2,11 +2,9 @@ package com.ga.gymio.service;
 
 import com.ga.gymio.authentication.JWTUtils;
 import com.ga.gymio.authentication.MyUserDetails;
-import com.ga.gymio.dto.request.AdminUserUpdateRequest;
-import com.ga.gymio.dto.request.RegisterRequest;
+import com.ga.gymio.dto.request.*;
 import com.ga.gymio.exception.*;
 import com.ga.gymio.model.User;
-import com.ga.gymio.dto.request.LoginRequest;
 import com.ga.gymio.dto.response.LoginResponse;
 import com.ga.gymio.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -169,6 +167,78 @@ public class UserService {
         }
     }
 
+
+    private String generateResetToken() {
+
+        SecureRandom secureRandom = new SecureRandom();
+
+        byte[] tokenBytes = new byte[32];
+
+        secureRandom.nextBytes(tokenBytes);
+
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
+    }
+
+    public void forgotPassword(ForgotPasswordRequest request) {
+
+        String email = request.getEmail()
+                .trim()
+                .toLowerCase();
+
+        Optional<User> optionalUser =
+                userRepository.findByEmail(email);
+
+        if (optionalUser.isEmpty()) {
+            return;
+        }
+
+        User user = optionalUser.get();
+
+        String token = generateResetToken();
+
+        user.setPasswordResetToken(token);
+
+        user.setPasswordResetTokenExpiresAt(
+                LocalDateTime.now().plusMinutes(15)
+        );
+
+        userRepository.save(user);
+
+        emailService.sendPasswordResetEmail(
+                user.getEmail(),
+                token
+        );
+    }
+
+    public void resetPassword(ResetPasswordRequest request) {
+
+        User user = userRepository
+                .findByPasswordResetToken(request.getToken())
+                .orElseThrow(() ->
+                        new InvalidTokenException(
+                                "Invalid password reset token"
+                        )
+                );
+
+        if (user.getPasswordResetTokenExpiresAt() == null
+                || user.getPasswordResetTokenExpiresAt()
+                .isBefore(LocalDateTime.now())) {
+
+            throw new InvalidTokenException(
+                    "Password reset token has expired"
+            );
+        }
+
+        user.setPassword(
+                passwordEncoder.encode(request.getNewPassword())
+        );
+
+        user.setPasswordResetToken(null);
+        user.setPasswordResetTokenExpiresAt(null);
+
+        userRepository.save(user);
+    }
+
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
@@ -190,4 +260,5 @@ public class UserService {
 
         userRepository.save(user);
     }
+
 }
