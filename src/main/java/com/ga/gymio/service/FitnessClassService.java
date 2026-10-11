@@ -33,6 +33,7 @@ public class FitnessClassService {
     private final BookingRepository bookingRepository;
     private final EmailService emailService;
     private final AuditLogService auditLogService;
+    private final NotificationService notificationService;
 
     private static final Logger logger = LoggerFactory.getLogger(FitnessClassService.class);
 
@@ -233,6 +234,22 @@ public class FitnessClassService {
 
         FitnessClass updatedClass = fitnessClassRepository.save(existingFitnessClass);
 
+        List<Booking> confirmedBookings =
+                bookingRepository.findByFitnessClassIdAndStatus(
+                        updatedClass.getId(),
+                        Booking.Status.CONFIRMED
+                );
+
+        for (Booking booking : confirmedBookings) {
+
+            notificationService.sendNotification(
+                    booking.getCustomer().getId(),
+                    "Fitness Class "
+                            + updatedClass.getName()
+                            + " has been updated"
+            );
+        }
+
         auditLogService.log(
                 AuditLog.Action.UPDATE_CLASS,
                 "User " + currentUser.getId() + " updated Fitness Class " + updatedClass.getId(),
@@ -286,6 +303,13 @@ public class FitnessClassService {
 
         for (Booking booking : confirmedBookings) {
             booking.setStatus(Booking.Status.CANCELLED);
+
+            notificationService.sendNotification(
+                    booking.getCustomer().getId(),
+                    "Fitness Class "
+                            + fitnessClass.getName()
+                            + " has been cancelled"
+            );
 
             emailService.sendFitnessClassCancellationEmail(
                     booking.getCustomer().getEmail(),

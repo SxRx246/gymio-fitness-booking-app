@@ -32,6 +32,7 @@ public class BookingService {
     private final FitnessClassRepository fitnessClassRepository;
     private final EmailService emailService;
     private final AuditLogService auditLogService;
+    private final NotificationService notificationService;
 
     private static final Logger logger =
             LoggerFactory.getLogger(BookingService.class);
@@ -109,6 +110,13 @@ public class BookingService {
                 AuditLog.Action.BOOK_CLASS,
         "User " + currentUser.getId() + " booked Fitness Class " + fitnessClass.getId(),
                 currentUser );
+
+        notificationService.sendNotification(
+                currentUser.getId(),
+                "Booking #" + savedBooking.getId()
+                        + " confirmed for Fitness Class "
+                        + fitnessClass.getName()
+        );
 
         emailService.sendBookingConfirmationEmail(
                 currentUser.getEmail(),
@@ -275,6 +283,13 @@ public class BookingService {
                 AuditLog.Action.CANCEL_BOOKING,
        "User " + currentUser.getId() + " cancelled Booking " +
                 booking.getId(), currentUser
+        );
+
+        notificationService.sendNotification(
+                booking.getCustomer().getId(),
+                "Booking #" + booking.getId()
+                        + " cancelled for Fitness Class "
+                        + fitnessClass.getName()
         );
 
         emailService.sendBookingCancellationEmail(
