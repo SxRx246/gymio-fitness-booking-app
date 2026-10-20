@@ -15,6 +15,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+/**
+ * Filters incoming HTTP requests to validate JWT tokens and authenticate users.
+ * If a valid token is present, the user's authentication details are stored
+ * in the Spring Security context.
+ */
 @Component
 public class JwtRequestFilter extends OncePerRequestFilter {
 
@@ -24,6 +29,13 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     @Autowired
     private JWTUtils jwtUtils;
 
+    /**
+     * Extracts the JWT from the request's Authorization header.
+     *
+     * @param request the incoming HTTP request
+     * @return the JWT without the "Bearer " prefix, or null if no valid
+     *         Bearer header is present
+     */
     private String parseJwt(HttpServletRequest request) {
         String headerAuth = request.getHeader("Authorization");
         if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
@@ -32,6 +44,16 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         return null;
     }
 
+    /**
+     * Processes each request by validating its JWT and setting the user's
+     * authentication in the Spring Security context when the token is valid.
+     *
+     * @param request the incoming HTTP request
+     * @param response the outgoing HTTP response
+     * @param filterChain the filter chain used to continue request processing
+     * @throws ServletException if an error occurs while processing the request
+     * @throws IOException if an input or output error occurs
+     */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {

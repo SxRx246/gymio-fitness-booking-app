@@ -13,6 +13,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * Configures security settings for the Gymio application, including password
+ * encoding, request authorization, stateless sessions, and JWT authentication.
+ */
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
@@ -20,11 +24,25 @@ public class SecurityConfiguration {
 
     private final JwtRequestFilter jwtRequestFilter;
 
+    /**
+     * Creates a password encoder that securely hashes passwords using BCrypt.
+     *
+     * @return the BCrypt password encoder
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Configures HTTP security, permits access to public authentication and
+     * documentation endpoints, requires authentication for other requests,
+     * and adds the JWT filter to the security filter chain.
+     *
+     * @param http the HTTP security configuration
+     * @return the configured security filter chain
+     * @throws Exception if the security configuration cannot be built
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -51,6 +69,13 @@ public class SecurityConfiguration {
         return http.build();
     }
 
+    /**
+     * Retrieves Spring Security's authentication manager.
+     *
+     * @param authConfig the authentication configuration
+     * @return the configured authentication manager
+     * @throws Exception if the authentication manager cannot be retrieved
+     */
     @Bean
     public AuthenticationManager authenticationManager(
             AuthenticationConfiguration authConfig) throws Exception {
