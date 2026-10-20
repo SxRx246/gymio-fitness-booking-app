@@ -19,6 +19,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Seeds the development database with sample users, profiles, fitness classes,
+ * bookings, and audit logs for testing and demonstration purposes.
+ *
+ * This configuration is active only when the {@code dev} profile is enabled.
+ * Seed data is inserted only when the user repository is empty.
+ */
 @Configuration
 @Profile("dev")
 @RequiredArgsConstructor
@@ -31,6 +38,14 @@ public class DatabaseSeeder {
     private final AuditLogRepository auditLogRepository;
     private final PasswordEncoder passwordEncoder;
 
+    /**
+     * Creates a runner that inserts sample data when the application starts.
+     *
+     * If users already exist in the database, seeding is skipped to avoid
+     * inserting the sample data again.
+     *
+     * @return a command-line runner that initializes development data
+     */
     @Bean
     public org.springframework.boot.CommandLineRunner seedData() {
 
@@ -464,12 +479,17 @@ public class DatabaseSeeder {
     }
 
 
-    /*
-     * =========================
-     * USER HELPER
-     * =========================
+    /**
+     * Creates and saves a user with an encoded password and the specified role.
+     *
+     * The seeded account is activated and its email is marked as verified.
+     * Verification and password-reset tokens are cleared.
+     *
+     * @param email the user's email address
+     * @param password the user's raw password, which is encoded before saving
+     * @param role the role assigned to the user
+     * @return the saved user
      */
-
     private User createUser(
             String email,
             String password,
@@ -497,12 +517,16 @@ public class DatabaseSeeder {
     }
 
 
-    /*
-     * =========================
-     * PROFILE HELPER
-     * =========================
+    /**
+     * Creates and saves a profile associated with a user.
+     *
+     * @param user the user who owns the profile
+     * @param firstName the profile owner's first name
+     * @param lastName the profile owner's last name
+     * @param phoneNumber the profile owner's phone number
+     * @param dateOfBirth the profile owner's date of birth
+     * @return the saved user profile
      */
-
     private UserProfile createProfile(
             User user,
             String firstName,
@@ -531,12 +555,19 @@ public class DatabaseSeeder {
     }
 
 
-    /*
-     * =========================
-     * FITNESS CLASS HELPER
-     * =========================
+    /**
+     * Creates and saves a scheduled fitness class assigned to a trainer.
+     *
+     * @param name the name of the fitness class
+     * @param description a description of the class
+     * @param type the type of workout
+     * @param level the difficulty level
+     * @param startTime the class start date and time
+     * @param endTime the class end date and time
+     * @param capacity the maximum number of participants
+     * @param trainer the trainer assigned to the class
+     * @return the saved fitness class
      */
-
     private FitnessClass createClass(
             String name,
             String description,
@@ -564,12 +595,14 @@ public class DatabaseSeeder {
     }
 
 
-    /*
-     * =========================
-     * BOOKING HELPER
-     * =========================
+    /**
+     * Creates and saves a booking for a customer and a fitness class.
+     *
+     * @param customer the customer making the booking
+     * @param fitnessClass the class being booked
+     * @param status the initial status assigned to the booking
+     * @return the saved booking
      */
-
     private Booking createBooking(
             User customer,
             FitnessClass fitnessClass,
@@ -586,12 +619,13 @@ public class DatabaseSeeder {
     }
 
 
-    /*
-     * =========================
-     * AUDIT LOG HELPER
-     * =========================
+    /**
+     * Creates and saves an audit log entry for a user-related action.
+     *
+     * @param action the type of action being recorded
+     * @param description a description of the recorded event
+     * @param user the user associated with the event
      */
-
     private void createAuditLog(
             AuditLog.Action action,
             String description,

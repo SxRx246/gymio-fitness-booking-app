@@ -8,9 +8,19 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Configures OpenAPI documentation for the Gymio Fitness Booking API,
+ * including API information and JWT bearer authentication.
+ */
 @Configuration
 public class OpenApiConfig {
 
+    /**
+     * Creates the OpenAPI configuration with the API's title, version,
+     * description, and JWT bearer authentication scheme.
+     *
+     * @return the configured OpenAPI documentation object
+     */
     @Bean
     public OpenAPI gymioOpenAPI() {
         return new OpenAPI()
