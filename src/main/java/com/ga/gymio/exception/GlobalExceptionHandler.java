@@ -9,6 +9,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+/**
+ * Handles application exceptions and converts them into consistent
+ * HTTP error responses containing the status, error code, message, and request path.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 

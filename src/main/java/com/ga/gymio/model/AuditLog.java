@@ -9,6 +9,9 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
+/**
+ * Records user-related actions performed within the Gymio application.
+ */
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter

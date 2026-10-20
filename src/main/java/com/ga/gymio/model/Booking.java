@@ -10,6 +10,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+/**
+ * Represents a customer's booking for a fitness class.
+ */
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter

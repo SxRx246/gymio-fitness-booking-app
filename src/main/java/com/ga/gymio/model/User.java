@@ -11,6 +11,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+/**
+ * Represents a Gymio user account, including authentication details,
+ * roles, account status, and email verification and password recovery data.
+ */
 @Getter
 @Setter
 @AllArgsConstructor

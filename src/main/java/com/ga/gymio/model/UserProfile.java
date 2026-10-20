@@ -8,6 +8,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Stores a user's personal profile information and links it to their account.
+ */
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
