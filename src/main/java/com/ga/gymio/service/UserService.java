@@ -25,6 +25,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Manages user accounts, authentication, email verification,
+ * password recovery, and user administration.
+ */
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -36,6 +40,11 @@ public class UserService {
     private final EmailService emailService;
     private final AuditLogService auditLogService;
 
+    /**
+     * Registers a new customer account and sends an email verification link.
+     *
+     * @param request the registration details
+     */
     public void createUser(RegisterRequest request) {
         String email = request.getEmail().trim().toLowerCase();
 
@@ -81,6 +90,11 @@ public class UserService {
         );
     }
 
+    /**
+     * Verifies a user's email using a valid, unexpired verification token.
+     *
+     * @param token the email verification token
+     */
     public void verifyEmail(String token) {
 
         User user = userRepository
@@ -120,6 +134,12 @@ public class UserService {
         );
     }
 
+    /**
+     * Resends the verification email if the user is eligible to request one.
+     *
+     * @param email the email address of the user
+     * @throws UsernameNotFoundException if no user exists with the email
+     */
     public void resendVerificationEmail(String email) throws UsernameNotFoundException {
 
         User user = userRepository.findByEmail(email)
@@ -167,6 +187,12 @@ public class UserService {
         );
     }
 
+    /**
+     * Authenticates a user and generates a JWT after successful login.
+     *
+     * @param loginRequest the user's login credentials
+     * @return a response containing the JWT
+     */
     public LoginResponse loginUser(LoginRequest loginRequest) {
         try {
             Authentication authentication = authenticationManager
@@ -193,6 +219,11 @@ public class UserService {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
     }
 
+    /**
+     * Initiates password recovery by sending a reset link when the account exists.
+     *
+     * @param request the password recovery request
+     */
     public void forgotPassword(ForgotPasswordRequest request) {
 
         String email = request.getEmail()
@@ -224,6 +255,11 @@ public class UserService {
         );
     }
 
+    /**
+     * Resets a user's password using a valid, unexpired reset token.
+     *
+     * @param request the password reset details
+     */
     public void resetPassword(ResetPasswordRequest request) {
 
         User user = userRepository
@@ -259,6 +295,11 @@ public class UserService {
         );
     }
 
+    /**
+     * Retrieves the currently authenticated user.
+     *
+     * @return the authenticated user's account
+     */
     public User getCurrentUser(){
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
@@ -271,6 +312,11 @@ public class UserService {
         return currentUser;
     }
 
+    /**
+     * Changes the authenticated user's password after verifying the current password.
+     *
+     * @param request the current and new password details
+     */
     public void changePassword(ChangePasswordRequest request) {
 
         User currentUser = getCurrentUser();
@@ -306,10 +352,21 @@ public class UserService {
         );
     }
 
+    /**
+     * Retrieves all registered users.
+     *
+     * @return the list of users
+     */
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
+    /**
+     * Updates a user's role or account status.
+     *
+     * @param id the ID of the user to update
+     * @param request the fields to update
+     */
     public void updateUser(Long id, AdminUserUpdateRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() ->

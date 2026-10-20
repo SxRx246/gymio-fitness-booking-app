@@ -21,6 +21,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 
+/**
+ * Manages user profile creation, retrieval, and updates,
+ * including profile image handling.
+ */
 @Service
 @RequiredArgsConstructor
 public class UserProfileService {
@@ -31,6 +35,13 @@ public class UserProfileService {
 
     private final String uploadDir = "profile-images/";
 
+    /**
+     * Creates a profile for the authenticated user and optionally saves a profile image.
+     *
+     * @param request the profile information
+     * @param image the profile image to upload
+     * @return the created profile details
+     */
     public ProfileResponse createProfile(
             ProfileRequest request,
             MultipartFile image) {
@@ -66,6 +77,11 @@ public class UserProfileService {
         return mapToResponse(savedProfile);
     }
 
+    /**
+     * Retrieves the profile belonging to the authenticated user.
+     *
+     * @return the user's profile details
+     */
     public ProfileResponse getProfile() {
 
         User user = getAuthenticatedUser();
@@ -81,6 +97,13 @@ public class UserProfileService {
         return mapToResponse(profile);
     }
 
+    /**
+     * Updates the authenticated user's profile and replaces the profile image if provided.
+     *
+     * @param request the updated profile information
+     * @param image the new profile image, if provided
+     * @return the updated profile details
+     */
     public ProfileResponse updateProfile(
             ProfileRequest request,
             MultipartFile image) {

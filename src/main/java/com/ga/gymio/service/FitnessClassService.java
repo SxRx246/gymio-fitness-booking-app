@@ -25,6 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Manages fitness classes, including creation, retrieval, updates,
+ * cancellation, deletion, and automatic status transitions.
+ */
 @Service
 @RequiredArgsConstructor
 public class FitnessClassService {
@@ -37,6 +41,11 @@ public class FitnessClassService {
 
     private static final Logger logger = LoggerFactory.getLogger(FitnessClassService.class);
 
+    /**
+     * Checks that a trainer has the correct role, is active, and has a verified email.
+     *
+     * @param trainer the user to validate as a trainer
+     */
     public void validateTrainer(User trainer) {
         if (trainer.getRole() != User.Role.TRAINER) {
             throw new ForbiddenException(
@@ -54,6 +63,12 @@ public class FitnessClassService {
         }
     }
 
+    /**
+     * Creates a fitness class after validating the trainer and class schedule.
+     *
+     * @param request the fitness class details
+     * @return the saved fitness class
+     */
     public FitnessClass createFitnessClass(FitnessClassRequest request) {
         logger.info("Creating fitness class: {}", request.getName());
 
@@ -107,6 +122,12 @@ public class FitnessClassService {
         return savedClass;
     }
 
+    /**
+     * Retrieves a fitness class by its ID.
+     *
+     * @param id the fitness class ID
+     * @return the requested fitness class
+     */
     public FitnessClass getFitnessClass(Long id) {
         logger.info("Retrieving fitness class with id {}", id);
         return fitnessClassRepository.findById(id).orElseThrow(() ->
@@ -116,6 +137,13 @@ public class FitnessClassService {
         );
     }
 
+    /**
+     * Retrieves a trainer's fitness classes in paginated form.
+     *
+     * @param trainerId the trainer's user ID
+     * @param pageable pagination and sorting information
+     * @return a page of the trainer's fitness classes
+     */
     public Page<FitnessClass> getFitnessClasses(Long trainerId, Pageable pageable) {
         logger.info("Retrieving fitness classes of trainer {}", trainerId);
 
@@ -136,6 +164,15 @@ public class FitnessClassService {
         return fitnessClassRepository.findByTrainer(trainer, pageable);
     }
 
+    /**
+     * Searches fitness classes using optional type, level, and status filters.
+     *
+     * @param type the class type filter, or null to include all types
+     * @param level the difficulty level filter, or null to include all levels
+     * @param status the class status filter, or null to include all statuses
+     * @param pageable pagination and sorting information
+     * @return a page of matching fitness classes
+     */
     public Page<FitnessClass> searchFitnessClasses(
             FitnessClass.Type type,
             FitnessClass.Level level,
@@ -187,6 +224,13 @@ public class FitnessClassService {
         );
     }
 
+    /**
+     * Updates a fitness class after checking ownership and its current status.
+     *
+     * @param request the updated fitness class details
+     * @param id the ID of the fitness class to update
+     * @return the updated fitness class
+     */
     public FitnessClass updateFitnessClass(FitnessClassRequest request, Long id) {
         logger.info("Updating fitness class with id {}", id);
 
@@ -260,6 +304,11 @@ public class FitnessClassService {
         return updatedClass;
     }
 
+    /**
+     * Cancels a fitness class and updates its confirmed bookings and notifications.
+     *
+     * @param id the ID of the fitness class to cancel
+     */
     @Transactional
     public void cancelFitnessClass(Long id) {
         logger.info("Cancelling fitness class with id {}", id);
@@ -326,6 +375,9 @@ public class FitnessClassService {
         logger.info("Fitness class cancelled successfully with id {}", cancelledClass.getId());
     }
 
+    /**
+     * Periodically updates fitness class and booking statuses based on their schedules.
+     */
     @Scheduled(fixedRate = 60000)
     @Transactional
     public void updateFitnessClassStatuses() {
@@ -433,6 +485,11 @@ public class FitnessClassService {
         bookingRepository.saveAll(confirmedBookings);
     }
 
+    /**
+     * Deletes a fitness class and records the action in the audit log.
+     *
+     * @param id the ID of the fitness class to delete
+     */
     public void deleteFitnessClass(Long id) {
 
         logger.info("Deleting fitness class with id {}", id);

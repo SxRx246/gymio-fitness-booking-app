@@ -8,12 +8,21 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+/**
+ * Sends account-related and booking-related email notifications to Gymio users.
+ */
 @Service
 @RequiredArgsConstructor
 public class EmailService {
 
     private final JavaMailSender mailSender;
 
+    /**
+     * Sends an email asking the user to verify their email address.
+     *
+     * @param email the recipient's email address
+     * @param token the email verification token
+     */
     public void sendVerificationEmail(String email, String token) {
 
         String verificationLink =
@@ -36,6 +45,12 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    /**
+     * Sends a password-reset link to the user.
+     *
+     * @param email the recipient's email address
+     * @param token the password-reset token
+     */
     public void sendPasswordResetEmail(
             String email,
             String token
@@ -63,6 +78,14 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    /**
+     * Sends confirmation details for a newly created booking.
+     *
+     * @param email the recipient's email address
+     * @param className the name of the booked fitness class
+     * @param startTime the class start time in ISO date-time format
+     * @param endTime the class end time in ISO date-time format
+     */
     public void sendBookingConfirmationEmail( String email, String className, String startTime, String endTime ) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMMM yyyy 'at' h:mm a");
 
@@ -86,6 +109,14 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    /**
+     * Notifies the user by email that their booking has been cancelled.
+     *
+     * @param email the recipient's email address
+     * @param className the name of the fitness class
+     * @param startTime the class start time in ISO date-time format
+     * @param endTime the class end time in ISO date-time format
+     */
     public void sendBookingCancellationEmail(
             String email,
             String className,
@@ -121,6 +152,14 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    /**
+     * Notifies the user by email that their booking has been completed.
+     *
+     * @param email the recipient's email address
+     * @param className the name of the fitness class
+     * @param startTime the class start time in ISO date-time format
+     * @param endTime the class end time in ISO date-time format
+     */
     public void sendBookingStatusChangeEmail(
             String email,
             String className,
@@ -155,6 +194,14 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    /**
+     * Notifies the user by email that their booked fitness class has been cancelled.
+     *
+     * @param email the recipient's email address
+     * @param className the name of the fitness class
+     * @param startTime the class start time in ISO date-time format
+     * @param endTime the class end time in ISO date-time format
+     */
     public void sendFitnessClassCancellationEmail(
             String email,
             String className,

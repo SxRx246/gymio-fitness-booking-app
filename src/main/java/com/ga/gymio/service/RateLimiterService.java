@@ -6,6 +6,9 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Limits the number of requests allowed from an IP address within a time window.
+ */
 @Service
 public class RateLimiterService {
 
@@ -14,6 +17,13 @@ public class RateLimiterService {
     private static final int MAX_REQUESTS = 5;
     private static final int WINDOW_MINUTES = 1;
 
+    /**
+     * Checks whether an IP address can make another request.
+     * Allows up to the configured maximum number of requests per time window.
+     *
+     * @param ipAddress the IP address making the request
+     * @return true if the request is allowed, false otherwise
+     */
     public boolean isAllowed(String ipAddress) {
 
         LocalDateTime now = LocalDateTime.now();

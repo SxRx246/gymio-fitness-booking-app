@@ -24,6 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Handles booking operations, including creation, retrieval, cancellation,
+ * and deletion, while enforcing booking rules and access permissions.
+ */
 @Service
 @RequiredArgsConstructor
 public class BookingService {
@@ -37,6 +41,12 @@ public class BookingService {
     private static final Logger logger =
             LoggerFactory.getLogger(BookingService.class);
 
+    /**
+     * Creates a booking if the fitness class is available and has capacity.
+     *
+     * @param fitnessClassId the ID of the fitness class to book
+     * @return the created booking details
+     */
     @Transactional
     public BookingResponse createBooking(Long fitnessClassId) {
 
@@ -133,6 +143,12 @@ public class BookingService {
         return new BookingResponse(savedBooking);
     }
 
+    /**
+     * Retrieves the current customer's bookings in paginated form.
+     *
+     * @param pageable pagination and sorting information
+     * @return a page of the customer's booking details
+     */
     public Page<BookingResponse> getMyBookings(Pageable pageable) {
 
         User currentUser = getCurrentUser();
@@ -148,6 +164,12 @@ public class BookingService {
         ).map(BookingResponse::new);
     }
 
+    /**
+     * Retrieves a booking after checking the current user's access permissions.
+     *
+     * @param id the ID of the booking
+     * @return the booking details
+     */
     public BookingResponse getBooking(Long id) {
 
         logger.info(
@@ -176,6 +198,12 @@ public class BookingService {
         return new BookingResponse(booking);
     }
 
+    /**
+     * Retrieves bookings for a fitness class, subject to role-based access rules.
+     *
+     * @param fitnessClassId the ID of the fitness class
+     * @return the list of booking details
+     */
     public List<BookingResponse> getBookingsByFitnessClass(Long fitnessClassId) {
 
         logger.info(
@@ -212,6 +240,11 @@ public class BookingService {
                 .toList();
     }
 
+    /**
+     * Retrieves all bookings for administrative purposes.
+     *
+     * @return all booking details
+     */
     public List<BookingResponse> getAllBookings() {
 
         logger.info("Admin retrieving all bookings");
@@ -222,6 +255,11 @@ public class BookingService {
                 .toList();
     }
 
+    /**
+     * Cancels a booking if cancellation is permitted by the booking rules.
+     *
+     * @param id the ID of the booking to cancel
+     */
     @Transactional
     public void cancelBooking(Long id) {
 
@@ -318,6 +356,11 @@ public class BookingService {
         return myUserDetails.getUser();
     }
 
+    /**
+     * Deletes a booking and records the deletion in the audit log.
+     *
+     * @param id the ID of the booking to delete
+     */
     public void deleteBooking(Long id) {
 
         logger.info("Admin deleting booking with id {}", id);
