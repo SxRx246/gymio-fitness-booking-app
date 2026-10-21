@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -34,6 +35,7 @@ public class Payment {
     private BigDecimal amount;
 
     @NotBlank(message = "Currency is required")
+    @Size(min = 3, max = 3, message = "Currency must contain 3 characters")
     @Column(nullable = false, length = 3)
     private String currency;
 
@@ -65,9 +67,14 @@ public class Payment {
         BENEFITPAY
     }
 
-    private String paymentProvider;
+    @NotNull(message = "Payment method is required")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PaymentMethod paymentMethod;
 
-    @Column(unique = true)
+    private String providerName;
+
+    @Column(unique = true, length = 255)
     private String providerPaymentId;
 
     @CreationTimestamp
@@ -86,5 +93,9 @@ public class Payment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_id")
     private Booking booking;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "membership_plan_id")
+    private MembershipPlan membershipPlan;
 
 }
