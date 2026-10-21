@@ -9,6 +9,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -47,6 +48,24 @@ public class User {
     }
     @Enumerated(EnumType.STRING)
     private Status status;
+
+    public enum MembershipStatus {
+        PENDING,
+        ACTIVE,
+        EXPIRED,
+        CANCELLED
+    }
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "membership_plan_id")
+    private MembershipPlan membershipPlan;
+
+    private LocalDate membershipStartDate;
+
+    private LocalDate membershipEndDate;
+
+    @Enumerated(EnumType.STRING)
+    private MembershipStatus membershipStatus;
 
     @JsonIgnore
     private String verificationToken;
