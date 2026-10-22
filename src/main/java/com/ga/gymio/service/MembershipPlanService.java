@@ -5,6 +5,7 @@ import com.ga.gymio.dto.request.MembershipPlanRequest;
 import com.ga.gymio.dto.response.MembershipResponse;
 import com.ga.gymio.exception.ForbiddenException;
 import com.ga.gymio.exception.InformationExistsException;
+import com.ga.gymio.exception.InformationNotFoundException;
 import com.ga.gymio.model.MembershipPlan;
 import com.ga.gymio.model.User;
 import com.ga.gymio.repository.MembershipPlanRepository;
@@ -81,4 +82,21 @@ public class MembershipPlanService {
         return membershipPlanRepository.findAll().stream().map(this::mapToResponse).toList();
 
     }
+
+    @Transactional(readOnly = true)
+    public MembershipResponse getMembershipPlan(Long id) {
+
+        logger.info("Retrieving membership plan with id {}", id);
+
+        MembershipPlan membershipPlan = membershipPlanRepository.findById(id)
+                .orElseThrow(() ->
+                        new InformationNotFoundException(
+                                "Membership plan with id " + id + " not found"
+                        )
+                );
+
+        return  mapToResponse(membershipPlan);
+    }
+
+
 }
