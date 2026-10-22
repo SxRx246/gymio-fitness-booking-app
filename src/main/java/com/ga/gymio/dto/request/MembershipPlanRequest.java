@@ -21,7 +21,7 @@ public class MembershipPlanRequest {
     private Integer durationByDays;
 
     @NotNull(message = "Membership price is required")
-    @DecimalMin(value = "0.00", inclusive = false, message = "Membership price cannot be negative")
+    @DecimalMin(value = "0.00", inclusive = false, message = "Membership price must be greater than zero")
     private BigDecimal price;
 
 }
