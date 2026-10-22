@@ -1,10 +1,6 @@
 package com.ga.gymio.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -26,16 +22,9 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull(message = "Payment amount is required")
-    @DecimalMin(
-            value = "0.01",
-            message = "Payment amount must be greater than zero"
-    )
     @Column(nullable = false, precision = 12, scale = 3)
     private BigDecimal amount;
 
-    @NotBlank(message = "Currency is required")
-    @Size(min = 3, max = 3, message = "Currency must contain 3 characters")
     @Column(nullable = false, length = 3)
     private String currency;
 
@@ -46,7 +35,6 @@ public class Payment {
         REFUNDED
     }
 
-    @NotNull(message = "Payment status is required")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Status status = Status.PENDING;
@@ -56,7 +44,6 @@ public class Payment {
         MEMBERSHIP
     }
 
-    @NotNull(message = "Payment type is required")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PaymentType paymentType;
@@ -67,7 +54,6 @@ public class Payment {
         BENEFITPAY
     }
 
-    @NotNull(message = "Payment method is required")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PaymentMethod paymentMethod;
@@ -85,7 +71,6 @@ public class Payment {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    @NotNull(message = "Customer is required")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "customer_id", nullable = false)
     private User customer;
