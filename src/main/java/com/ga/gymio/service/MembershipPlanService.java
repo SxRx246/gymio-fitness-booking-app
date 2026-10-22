@@ -16,6 +16,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class MembershipPlanService {
@@ -69,5 +71,14 @@ public class MembershipPlanService {
                 membershipPlan.getCreatedAt(),
                 membershipPlan.getUpdatedAt()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<MembershipResponse> getAllMembershipPlans(){
+
+        logger.info("Retrieving all membership plans");
+
+        return membershipPlanRepository.findAll().stream().map(this::mapToResponse).toList();
+
     }
 }
