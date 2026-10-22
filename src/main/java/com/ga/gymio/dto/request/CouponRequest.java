@@ -19,11 +19,6 @@ public class CouponRequest {
     @Size(max = 50, message = "Coupon code cannot exceed 50 characters")
     private String code;
 
-    public enum DiscountType {
-        PERCENTAGE,
-        FIXED_AMOUNT
-    }
-
     @NotNull(message = "Discount type is required")
     private Coupon.DiscountType discountType;
 
