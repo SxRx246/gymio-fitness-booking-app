@@ -98,5 +98,43 @@ public class MembershipPlanService {
         return  mapToResponse(membershipPlan);
     }
 
+    @Transactional
+    public MembershipResponse updateMembershipPlan(
+            Long id, MembershipPlanRequest request) {
+
+        logger.info("Updating membership plan with id {}", id);
+
+        User currentUser = getCurrentUser();
+        if (currentUser.getRole() != User.Role.ADMIN) {
+            throw new ForbiddenException(
+                    "Only administrators can update membership plans"
+            );
+        }
+
+        MembershipPlan membershipPlan = membershipPlanRepository.findById(id)
+                .orElseThrow(() ->
+                        new InformationNotFoundException(
+                                "Membership plan with id " + id + " not found"
+                        )
+                );
+
+        if (!membershipPlan.getName().equals(request.getName())
+                && membershipPlanRepository.existsByName(request.getName())) {
+            throw new InformationExistsException(
+                    "A membership plan with this name already exists"
+            );
+        }
+
+        membershipPlan.setName(request.getName());
+        membershipPlan.setDurationByDays(request.getDurationByDays());
+        membershipPlan.setPrice(request.getPrice());
+
+        MembershipPlan updatedPlan = membershipPlanRepository.save(membershipPlan);
+
+        logger.info("Membership plan updated successfully with id {}",
+                updatedPlan.getId());
+
+        return mapToResponse(updatedPlan);
+    }
 
 }
