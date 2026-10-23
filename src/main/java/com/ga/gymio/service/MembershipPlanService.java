@@ -3,6 +3,7 @@ package com.ga.gymio.service;
 import com.ga.gymio.authentication.MyUserDetails;
 import com.ga.gymio.dto.request.MembershipPlanRequest;
 import com.ga.gymio.dto.response.MembershipResponse;
+import com.ga.gymio.exception.ConflictException;
 import com.ga.gymio.exception.ForbiddenException;
 import com.ga.gymio.exception.InformationExistsException;
 import com.ga.gymio.exception.InformationNotFoundException;
@@ -138,6 +139,12 @@ public class MembershipPlanService {
                                 "Membership plan with id " + id + " not found"
                         )
                 );
+
+        if (!membershipPlan.isActive()) {
+            throw new ConflictException(
+                    "Cannot update an inactive membership plan"
+            );
+        }
 
         if (!membershipPlan.getName().equals(request.getName())
                 && membershipPlanRepository.existsByName(request.getName())) {
