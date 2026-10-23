@@ -165,4 +165,33 @@ public class MembershipPlanService {
         return mapToResponse(updatedPlan);
     }
 
+    @Transactional
+    public void deleteMembershipPlan(Long id) {
+        logger.info("Deactivating membership plan with id {}", id);
+
+        User currentUser = getCurrentUser();
+
+        if (currentUser.getRole() != User.Role.ADMIN) {
+            throw new ForbiddenException(
+                    "Only administrators can deactivate membership plans"
+            );
+        }
+
+        MembershipPlan membershipPlan = membershipPlanRepository.findById(id)
+                .orElseThrow(() -> new InformationNotFoundException(
+                        "Membership plan with id " + id + " not found"
+                ));
+
+        if (!membershipPlan.isActive()) {
+            throw new ConflictException(
+                    "Membership plan is already inactive"
+            );
+        }
+
+        membershipPlan.setActive(false);
+        membershipPlanRepository.save(membershipPlan);
+
+        logger.info("Membership plan deactivated successfully with id {}", id);
+    }
+
 }
