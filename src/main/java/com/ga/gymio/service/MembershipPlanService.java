@@ -98,6 +98,7 @@ public class MembershipPlanService {
 
     @Transactional(readOnly = true)
     public MembershipResponse getMembershipPlan(Long id) {
+        User currentUser = getCurrentUser();
 
         logger.info("Retrieving membership plan with id {}", id);
 
@@ -107,6 +108,13 @@ public class MembershipPlanService {
                                 "Membership plan with id " + id + " not found"
                         )
                 );
+
+        if (currentUser.getRole() != User.Role.ADMIN
+                && !membershipPlan.isActive()) {
+            throw new InformationNotFoundException(
+                    "Membership plan with id " + id + " not found"
+            );
+        }
 
         return mapToResponse(membershipPlan);
     }
