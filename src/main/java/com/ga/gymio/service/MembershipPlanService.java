@@ -69,6 +69,7 @@ public class MembershipPlanService {
                 membershipPlan.getName(),
                 membershipPlan.getDurationByDays(),
                 membershipPlan.getPrice(),
+                membershipPlan.isActive(),
                 membershipPlan.getCreatedAt(),
                 membershipPlan.getUpdatedAt()
         );

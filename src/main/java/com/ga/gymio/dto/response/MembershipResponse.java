@@ -13,6 +13,7 @@ public class MembershipResponse {
     private String name;
     private Integer durationByDays;
     private BigDecimal price;
+    private boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
