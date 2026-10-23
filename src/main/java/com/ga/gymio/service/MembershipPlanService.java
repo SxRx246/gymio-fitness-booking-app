@@ -76,9 +76,25 @@ public class MembershipPlanService {
     }
 
     @Transactional(readOnly = true)
-    public List<MembershipResponse> getAllMembershipPlans(){
+    public List<MembershipResponse> getAllActiveMembershipPlans() {
+        logger.info("Retrieving active membership plans");
 
+        return membershipPlanRepository.findAllByActiveTrue()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<MembershipResponse> getAllMembershipPlans(){
         logger.info("Retrieving all membership plans");
+
+        User currentUser = getCurrentUser();
+        if (currentUser.getRole() != User.Role.ADMIN) {
+            throw new ForbiddenException(
+                    "Only administrators can view all membership plans"
+            );
+        }
 
         return membershipPlanRepository.findAll().stream().map(this::mapToResponse).toList();
 
