@@ -20,12 +20,22 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Manages membership plan creation, retrieval, updates, and deactivation.
+ */
 @Service
 @RequiredArgsConstructor
 public class MembershipPlanService {
     private final MembershipPlanRepository membershipPlanRepository;
     private static final Logger logger = LoggerFactory.getLogger(MembershipPlanService.class);
 
+    /**
+     * Creates a membership plan after checking administrator permissions
+     * and ensuring its name is unique.
+     *
+     * @param request the membership plan details
+     * @return the created membership plan
+     */
     @Transactional
     public MembershipResponse createMembershipPlan(MembershipPlanRequest request) {
         logger.info("Creating Membership Plan: {}", request.getName());
@@ -76,6 +86,12 @@ public class MembershipPlanService {
         );
     }
 
+    /**
+     * Retrieves all membership plans for administrators and only active
+     * plans for other authenticated users.
+     *
+     * @return the membership plans visible to the current user
+     */
     @Transactional(readOnly = true)
     public List<MembershipResponse> getAllMembershipPlans() {
         User currentUser = getCurrentUser();
@@ -97,6 +113,13 @@ public class MembershipPlanService {
                 .toList();
     }
 
+    /**
+     * Retrieves a membership plan by ID, hiding inactive plans from
+     * non-administrator users.
+     *
+     * @param id the membership plan ID
+     * @return the requested membership plan
+     */
     @Transactional(readOnly = true)
     public MembershipResponse getMembershipPlan(Long id) {
         User currentUser = getCurrentUser();
@@ -120,6 +143,14 @@ public class MembershipPlanService {
         return mapToResponse(membershipPlan);
     }
 
+    /**
+     * Updates an active membership plan after checking administrator
+     * permissions and ensuring its name remains unique.
+     *
+     * @param id the ID of the membership plan to update
+     * @param request the updated membership plan details
+     * @return the updated membership plan
+     */
     @Transactional
     public MembershipResponse updateMembershipPlan(
             Long id, MembershipPlanRequest request) {
@@ -165,6 +196,11 @@ public class MembershipPlanService {
         return mapToResponse(updatedPlan);
     }
 
+    /**
+     * Deactivates a membership plan without physically deleting it.
+     *
+     * @param id the ID of the membership plan to deactivate
+     */
     @Transactional
     public void deleteMembershipPlan(Long id) {
         logger.info("Deactivating membership plan with id {}", id);
