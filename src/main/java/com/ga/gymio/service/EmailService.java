@@ -238,4 +238,29 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    /**
+     * Sends a membership status notification by email.
+     *
+     * @param email recipient's email address
+     * @param subject email subject
+     * @param messageBody notification details
+     */
+    public void sendMembershipEmail(
+            String email,
+            String subject,
+            String messageBody
+    ) {
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        message.setTo(email);
+        message.setSubject(subject);
+        message.setText(
+                "Hello!\n\n"
+                        + messageBody
+                        + "\n\nThank you for choosing Gymio."
+        );
+
+        mailSender.send(message);
+    }
+
 }
