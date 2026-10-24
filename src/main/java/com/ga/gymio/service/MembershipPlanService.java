@@ -7,6 +7,7 @@ import com.ga.gymio.exception.ConflictException;
 import com.ga.gymio.exception.ForbiddenException;
 import com.ga.gymio.exception.InformationExistsException;
 import com.ga.gymio.exception.InformationNotFoundException;
+import com.ga.gymio.model.AuditLog;
 import com.ga.gymio.model.MembershipPlan;
 import com.ga.gymio.model.User;
 import com.ga.gymio.repository.MembershipPlanRepository;
@@ -18,6 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -27,6 +29,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MembershipPlanService {
     private final MembershipPlanRepository membershipPlanRepository;
+    private final AuditLogService auditLogService;
     private static final Logger logger = LoggerFactory.getLogger(MembershipPlanService.class);
 
     /**
@@ -62,6 +65,14 @@ public class MembershipPlanService {
 
 
         MembershipPlan savedPlan = membershipPlanRepository.save(membershipPlan);
+
+        auditLogService.log(
+                AuditLog.Action.CREATE_MEMBERSHIP_PLAN,
+                "Admin " + currentUser.getId()
+                        + " created Membership Plan " + savedPlan.getId()
+                        + " (name: " + savedPlan.getName() + ")",
+                currentUser
+        );
 
         logger.info("Membership plan created successfully with id {}", savedPlan.getId());
 
@@ -184,11 +195,28 @@ public class MembershipPlanService {
             );
         }
 
+        String oldName = membershipPlan.getName();
+        Integer oldDuration = membershipPlan.getDurationByDays();
+        BigDecimal oldPrice = membershipPlan.getPrice();
+
         membershipPlan.setName(request.getName());
         membershipPlan.setDurationByDays(request.getDurationByDays());
         membershipPlan.setPrice(request.getPrice());
 
         MembershipPlan updatedPlan = membershipPlanRepository.save(membershipPlan);
+
+        auditLogService.log(
+                AuditLog.Action.UPDATE_MEMBERSHIP_PLAN,
+                "Admin " + currentUser.getId()
+                        + " updated Membership Plan " + updatedPlan.getId()
+                        + ". Previous values: name=" + oldName
+                        + ", duration=" + oldDuration
+                        + ", price=" + oldPrice
+                        + ". New values: name=" + updatedPlan.getName()
+                        + ", duration=" + updatedPlan.getDurationByDays()
+                        + ", price=" + updatedPlan.getPrice(),
+                currentUser
+        );
 
         logger.info("Membership plan updated successfully with id {}",
                 updatedPlan.getId());
@@ -227,6 +255,14 @@ public class MembershipPlanService {
         membershipPlan.setActive(false);
         membershipPlanRepository.save(membershipPlan);
 
+        auditLogService.log(
+                AuditLog.Action.DEACTIVATE_MEMBERSHIP_PLAN,
+                "Admin " + currentUser.getId()
+                        + " deactivated Membership Plan " + membershipPlan.getId()
+                        + " (name: " + membershipPlan.getName() + ")",
+                currentUser
+        );
+
         logger.info("Membership plan deactivated successfully with id {}", id);
     }
 
@@ -264,6 +300,14 @@ public class MembershipPlanService {
         membershipPlan.setActive(true);
 
         membershipPlanRepository.save(membershipPlan);
+
+        auditLogService.log(
+                AuditLog.Action.ACTIVATE_MEMBERSHIP_PLAN,
+                "Admin " + currentUser.getId()
+                        + " activated Membership Plan " + membershipPlan.getId()
+                        + " (name: " + membershipPlan.getName() + ")",
+                currentUser
+        );
 
         logger.info(
                 "Membership plan activated successfully with id {}",
