@@ -42,7 +42,12 @@ public class AuditLog {
         UPDATE_USER,
 
         COMPLETE_CLASS,
-        COMPLETE_BOOKING
+        COMPLETE_BOOKING,
+
+        CREATE_MEMBERSHIP_PLAN,
+        UPDATE_MEMBERSHIP_PLAN,
+        DEACTIVATE_MEMBERSHIP_PLAN,
+        ACTIVATE_MEMBERSHIP_PLAN
     }
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
