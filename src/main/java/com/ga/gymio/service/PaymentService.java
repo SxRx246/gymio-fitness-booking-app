@@ -118,5 +118,58 @@ public class PaymentService {
                 .toList();
     }
 
+    @Transactional
+    public PaymentResponse confirmDemoPayment(Long paymentId) {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null
+                || !(authentication.getPrincipal()
+                instanceof MyUserDetails userDetails)) {
+            throw new IllegalStateException(
+                    "An authenticated customer is required.");
+        }
+
+        User customer = userDetails.getUser();
+
+        if (customer.getRole() != User.Role.CUSTOMER) {
+            throw new IllegalStateException(
+                    "Only customers can confirm demo payments.");
+        }
+
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Payment not found."));
+
+        if (!payment.getCustomer().getId().equals(customer.getId())) {
+            throw new IllegalStateException(
+                    "You cannot confirm another customer's payment.");
+        }
+
+        if (!"GYMIO_DEMO".equals(payment.getProviderName())) {
+            throw new IllegalStateException(
+                    "This is not a demo payment.");
+        }
+
+        if (payment.getStatus() != Payment.Status.PENDING) {
+            throw new IllegalStateException(
+                    "Only pending payments can be confirmed.");
+        }
+
+        payment.setStatus(Payment.Status.COMPLETED);
+
+        Payment savedPayment = paymentRepository.save(payment);
+
+        return new PaymentResponse(
+                savedPayment.getId(),
+                savedPayment.getProviderPaymentId(),
+                savedPayment.getAmount(),
+                savedPayment.getCurrency(),
+                savedPayment.getStatus(),
+                savedPayment.getPaymentMethod(),
+                savedPayment.getCreatedAt()
+        );
+    }
 
 }
