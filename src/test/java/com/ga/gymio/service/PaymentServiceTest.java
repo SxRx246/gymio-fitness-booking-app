@@ -200,4 +200,31 @@ class PaymentServiceTest {
                         && payment.getPaymentType() == Payment.PaymentType.MEMBERSHIP
         ));
     }
+
+
+    @Test
+    void createMembershipPayment_shouldRejectInactivePlan() {
+        plan.setActive(false);
+
+        when(membershipPlanRepository.findById(10L))
+                .thenReturn(Optional.of(plan));
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> paymentService.createMembershipPayment(
+                        10L,
+                        Payment.PaymentMethod.values()[0]
+                )
+        );
+
+        verify(paymentRepository, never()).save(any(Payment.class));
+        verify(userRepository, never()).save(any(User.class));
+
+        assertEquals(
+                User.MembershipStatus.EXPIRED,
+                customer.getMembershipStatus()
+        );
+    }
+
+
 }
