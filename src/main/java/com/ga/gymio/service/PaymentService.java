@@ -14,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -81,4 +82,41 @@ public class PaymentService {
                 savedPayment.getCreatedAt()
         );
     }
+
+
+    @Transactional(readOnly = true)
+    public List<PaymentResponse> getMyPayments() {
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null
+                || !(authentication.getPrincipal()
+                instanceof MyUserDetails userDetails)) {
+            throw new IllegalStateException(
+                    "An authenticated customer is required.");
+        }
+
+        User customer = userDetails.getUser();
+
+        if (customer.getRole() != User.Role.CUSTOMER) {
+            throw new IllegalStateException(
+                    "Only customers can view their payment history.");
+        }
+
+        return paymentRepository
+                .findAllByCustomer_IdOrderByCreatedAtDesc(customer.getId())
+                .stream()
+                .map(payment -> new PaymentResponse(
+                        payment.getId(),
+                        payment.getProviderPaymentId(),
+                        payment.getAmount(),
+                        payment.getCurrency(),
+                        payment.getStatus(),
+                        payment.getPaymentMethod(),
+                        payment.getCreatedAt()
+                ))
+                .toList();
+    }
+
+
 }
