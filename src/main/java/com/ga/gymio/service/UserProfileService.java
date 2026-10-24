@@ -157,13 +157,23 @@ public class UserProfileService {
 
     private ProfileResponse mapToResponse(UserProfile profile) {
 
+        User user = profile.getUser();
+
+        String membershipPlanName = user.getMembershipPlan() != null
+                ? user.getMembershipPlan().getName()
+                : null;
+
         return new ProfileResponse(
                 profile.getId(),
                 profile.getFirstName(),
                 profile.getLastName(),
                 profile.getPhoneNumber(),
                 profile.getDateOfBirth(),
-                profile.getProfileImage()
+                profile.getProfileImage(),
+                membershipPlanName,
+                user.getMembershipStatus(),
+                user.getMembershipStartDate(),
+                user.getMembershipEndDate()
         );
     }
 

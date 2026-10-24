@@ -1,5 +1,6 @@
 package com.ga.gymio.dto.response;
 
+import com.ga.gymio.model.User;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -15,4 +16,9 @@ public class ProfileResponse {
     private String phoneNumber;
     private LocalDate dateOfBirth;
     private String imageUrl;
+
+    private String membershipPlanName;
+    private User.MembershipStatus membershipStatus;
+    private LocalDate membershipStartDate;
+    private LocalDate membershipEndDate;
 }
