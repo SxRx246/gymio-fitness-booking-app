@@ -13,6 +13,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * REST controller for managing membership plans.
+ *
+ * Provides endpoints to create, retrieve, update,
+ * and deactivate membership plans.
+ *
+ * Business logic and authorization checks are handled
+ * by the service layer, with additional access control
+ * enforced through Spring Security.
+ */
 @RestController
 @RequestMapping("/api/membership-plans")
 @RequiredArgsConstructor
@@ -20,6 +30,14 @@ import java.util.List;
 public class MembershipPlanController {
     private final MembershipPlanService membershipPlanService;
 
+    /**
+     * Creates a new membership plan.
+     *
+     * Only administrators can create membership plans.
+     *
+     * @param request validated membership plan details
+     * @return the created membership plan
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
@@ -29,6 +47,15 @@ public class MembershipPlanController {
         return membershipPlanService.createMembershipPlan(request);
     }
 
+    /**
+     * Retrieves all membership plans available to the
+     * authenticated user.
+     *
+     * Administrators can retrieve all plans, while other
+     * authenticated users can retrieve active plans.
+     *
+     * @return a list of membership plans
+     */
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public List<MembershipResponse> getAllMembershipPlans() {
@@ -36,6 +63,15 @@ public class MembershipPlanController {
         return membershipPlanService.getAllMembershipPlans();
     }
 
+    /**
+     * Retrieves a membership plan by its ID.
+     *
+     * Administrators can retrieve active or inactive plans.
+     * Other authenticated users can retrieve active plans only.
+     *
+     * @param id the membership plan ID, which must be positive
+     * @return the requested membership plan
+     */
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public MembershipResponse getMembershipPlan(
@@ -46,6 +82,15 @@ public class MembershipPlanController {
         return membershipPlanService.getMembershipPlan(id);
     }
 
+    /**
+     * Updates an existing membership plan.
+     *
+     * Only administrators can update membership plans.
+     *
+     * @param id the ID of the membership plan to update
+     * @param request validated updated membership plan details
+     * @return the updated membership plan
+     */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public MembershipResponse updateMembershipPlan(
@@ -57,6 +102,14 @@ public class MembershipPlanController {
         return membershipPlanService.updateMembershipPlan(id, request);
     }
 
+    /**
+     * Deactivates a membership plan without permanently
+     * deleting it from the database.
+     *
+     * Only administrators can deactivate membership plans.
+     *
+     * @param id the ID of the membership plan to deactivate
+     */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
