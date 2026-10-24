@@ -5,6 +5,7 @@ import com.ga.gymio.model.FitnessClass;
 import com.ga.gymio.service.FitnessClassService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -82,6 +83,7 @@ public class FitnessClassController {
             @RequestParam(required = false) FitnessClass.Type type,
             @RequestParam(required = false) FitnessClass.Level level,
             @RequestParam(required = false) FitnessClass.Status status,
+            @ParameterObject
             @PageableDefault(size = 10) Pageable pageable
     ) {
         return fitnessClassService.searchFitnessClasses(
