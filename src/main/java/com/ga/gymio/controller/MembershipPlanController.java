@@ -46,4 +46,15 @@ public class MembershipPlanController {
         return membershipPlanService.getMembershipPlan(id);
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public MembershipResponse updateMembershipPlan(
+            @PathVariable
+            @Positive(message = "Membership plan ID must be positive")
+                    Long id,
+            @Valid @RequestBody MembershipPlanRequest request) {
+
+        return membershipPlanService.updateMembershipPlan(id, request);
+    }
+
 }
