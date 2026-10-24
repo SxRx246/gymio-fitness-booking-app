@@ -121,6 +121,11 @@ public class MembershipPlanController {
         membershipPlanService.deleteMembershipPlan(id);
     }
 
+    /**
+     * Reactivates an inactive membership plan.
+     *
+     * @param id the ID of the membership plan to activate
+     */
     @PatchMapping("/{id}/activate")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
