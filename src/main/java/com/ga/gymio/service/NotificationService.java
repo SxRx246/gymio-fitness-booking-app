@@ -28,9 +28,9 @@ public class NotificationService {
 
         emitters.put(userId, emitter);
 
-        emitter.onCompletion(() -> emitters.remove(userId));
-        emitter.onTimeout(() -> emitters.remove(userId));
-        emitter.onError(error -> emitters.remove(userId));
+        emitter.onCompletion(() -> emitters.remove(userId, emitter));
+        emitter.onTimeout(() -> emitters.remove(userId, emitter));
+        emitter.onError(error -> emitters.remove(userId, emitter));
 
         return emitter;
     }
@@ -57,7 +57,7 @@ public class NotificationService {
                             .data(message)
             );
         } catch (IOException e) {
-            emitters.remove(userId);
+            emitters.remove(userId, emitter);
         }
     }
 }
