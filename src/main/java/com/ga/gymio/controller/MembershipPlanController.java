@@ -121,4 +121,15 @@ public class MembershipPlanController {
         membershipPlanService.deleteMembershipPlan(id);
     }
 
+    @PatchMapping("/{id}/activate")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
+    public void activateMembershipPlan(
+            @PathVariable
+            @Positive(message = "Membership plan ID must be positive")
+                    Long id) {
+
+        membershipPlanService.activateMembershipPlan(id);
+    }
+
 }
