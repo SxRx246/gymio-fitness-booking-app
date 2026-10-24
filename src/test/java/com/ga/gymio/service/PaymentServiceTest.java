@@ -174,4 +174,30 @@ class PaymentServiceTest {
         verify(userRepository, never()).save(any(User.class));
         verify(paymentRepository, never()).save(any(Payment.class));
     }
+
+    @Test
+    void createMembershipPayment_shouldNotActivateMembershipBeforeConfirmation() {
+        when(membershipPlanRepository.findById(10L))
+                .thenReturn(Optional.of(plan));
+
+        when(paymentRepository.save(any(Payment.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        paymentService.createMembershipPayment(
+                10L,
+                Payment.PaymentMethod.values()[0]
+        );
+
+        assertEquals(
+                User.MembershipStatus.EXPIRED,
+                customer.getMembershipStatus()
+        );
+
+        verify(userRepository, never()).save(any(User.class));
+
+        verify(paymentRepository).save(argThat(payment ->
+                payment.getStatus() == Payment.Status.PENDING
+                        && payment.getPaymentType() == Payment.PaymentType.MEMBERSHIP
+        ));
+    }
 }
