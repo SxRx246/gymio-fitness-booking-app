@@ -57,4 +57,15 @@ public class MembershipPlanController {
         return membershipPlanService.updateMembershipPlan(id, request);
     }
 
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deleteMembershipPlan(
+            @PathVariable
+            @Positive(message = "Membership plan ID must be positive")
+                    Long id) {
+
+        membershipPlanService.deleteMembershipPlan(id);
+    }
+
 }
