@@ -1,6 +1,7 @@
 package com.ga.gymio.service;
 
 import com.ga.gymio.authentication.MyUserDetails;
+import com.ga.gymio.dto.response.PaymentResponse;
 import com.ga.gymio.model.MembershipPlan;
 import com.ga.gymio.model.Payment;
 import com.ga.gymio.model.User;
@@ -24,7 +25,7 @@ public class PaymentService {
     private final UserRepository userRepository;
 
     @Transactional
-    public Payment createMembershipPayment(
+    public PaymentResponse createMembershipPayment(
             Long membershipPlanId,
             Payment.PaymentMethod paymentMethod) {
 
@@ -68,6 +69,16 @@ public class PaymentService {
         payment.setProviderPaymentId(
                 "DEMO-" + UUID.randomUUID());
 
-        return paymentRepository.save(payment);
+        Payment savedPayment = paymentRepository.save(payment);
+
+        return new PaymentResponse(
+                savedPayment.getId(),
+                savedPayment.getProviderPaymentId(),
+                savedPayment.getAmount(),
+                savedPayment.getCurrency(),
+                savedPayment.getStatus(),
+                savedPayment.getPaymentMethod(),
+                savedPayment.getCreatedAt()
+        );
     }
 }
