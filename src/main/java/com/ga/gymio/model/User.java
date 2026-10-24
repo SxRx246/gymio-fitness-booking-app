@@ -59,17 +59,21 @@ public class User {
     }
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "membership_status")
     private MembershipStatus membershipStatus;
-
-    private LocalDate membershipFrozenAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "membership_plan_id")
     private MembershipPlan membershipPlan;
 
+    @Column(name = "membership_start_date")
     private LocalDate membershipStartDate;
 
+    @Column(name = "membership_end_date")
     private LocalDate membershipEndDate;
+
+    @Column(name = "membership_frozen_at")
+    private LocalDate membershipFrozenAt;
 
     @JsonIgnore
     private String verificationToken;
