@@ -50,8 +50,7 @@ public class Payment {
 
     public enum PaymentMethod{
         CREDIT_CARD,
-        DEBIT_CARD,
-        BENEFITPAY
+        DEBIT_CARD
     }
 
     @Enumerated(EnumType.STRING)
