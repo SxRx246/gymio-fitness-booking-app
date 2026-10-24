@@ -17,7 +17,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -54,12 +57,13 @@ class PaymentServiceTest {
         plan.setId(10L);
         plan.setActive(true);
         plan.setDurationByDays(30);
+        plan.setPrice(new BigDecimal("25.00"));
 
         userDetails = mock(MyUserDetails.class);
         authentication = mock(Authentication.class);
 
-        when(userDetails.getUser()).thenReturn(customer);
-        when(authentication.getPrincipal()).thenReturn(userDetails);
+        lenient().when(userDetails.getUser()).thenReturn(customer);
+        lenient().when(authentication.getPrincipal()).thenReturn(userDetails);
 
         SecurityContextHolder.getContext()
                 .setAuthentication(authentication);
@@ -175,6 +179,22 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any(Payment.class));
     }
 
+
+    @Test
+    void confirmDemoPayment_shouldRejectUnauthenticatedUser() {
+        SecurityContextHolder.clearContext();
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> paymentService.confirmDemoPayment(100L)
+        );
+
+        verify(paymentRepository, never()).findById(any());
+        verify(paymentRepository, never()).save(any(Payment.class));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+
     @Test
     void createMembershipPayment_shouldNotActivateMembershipBeforeConfirmation() {
         when(membershipPlanRepository.findById(10L))
@@ -244,5 +264,155 @@ class PaymentServiceTest {
         verify(userRepository, never()).save(any(User.class));
     }
 
+
+    @Test
+    void createMembershipPayment_shouldRejectNonexistentPlan() {
+        when(membershipPlanRepository.findById(10L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> paymentService.createMembershipPayment(
+                        10L,
+                        Payment.PaymentMethod.values()[0]
+                )
+        );
+
+        verify(paymentRepository, never()).save(any(Payment.class));
+        verify(userRepository, never()).save(any(User.class));
+
+        assertEquals(
+                User.MembershipStatus.EXPIRED,
+                customer.getMembershipStatus()
+        );
+    }
+
+    @Test
+    void createMembershipPayment_shouldRejectUnauthenticatedUser() {
+        SecurityContextHolder.clearContext();
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> paymentService.createMembershipPayment(
+                        10L,
+                        Payment.PaymentMethod.values()[0]
+                )
+        );
+
+        verify(membershipPlanRepository, never()).findById(any());
+        verify(paymentRepository, never()).save(any(Payment.class));
+    }
+
+    @Test
+    void createMembershipPayment_shouldCreatePendingPayment() {
+        when(membershipPlanRepository.findById(10L))
+                .thenReturn(Optional.of(plan));
+
+        when(paymentRepository.save(any(Payment.class)))
+                .thenAnswer(invocation -> {
+                    Payment payment = invocation.getArgument(0);
+                    payment.setId(100L);
+                    return payment;
+                });
+
+        paymentService.createMembershipPayment(
+                10L,
+                Payment.PaymentMethod.values()[0]
+        );
+
+        verify(paymentRepository).save(argThat(payment ->
+                payment.getStatus() == Payment.Status.PENDING
+                        && payment.getPaymentType()
+                        == Payment.PaymentType.MEMBERSHIP
+                        && payment.getCustomer() == customer
+                        && payment.getMembershipPlan() == plan
+                        && "BHD".equals(payment.getCurrency())
+                        && Objects.equals(payment.getAmount(), plan.getPrice())
+        ));
+
+        verify(userRepository, never()).save(any(User.class));
+
+        assertEquals(
+                User.MembershipStatus.EXPIRED,
+                customer.getMembershipStatus()
+        );
+    }
+
+    @Test
+    void getMyPayments_shouldRejectUnauthenticatedUser() {
+        SecurityContextHolder.clearContext();
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> paymentService.getMyPayments()
+        );
+
+        verify(paymentRepository, never())
+                .findAllByCustomer_IdOrderByCreatedAtDesc(any());
+    }
+
+    @Test
+    void getMyPayments_shouldRejectNonCustomer() {
+        customer.setRole(User.Role.ADMIN);
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> paymentService.getMyPayments()
+        );
+
+        verify(paymentRepository, never())
+                .findAllByCustomer_IdOrderByCreatedAtDesc(any());
+    }
+
+
+    @Test
+    void getMyPayments_shouldReturnCustomerPaymentHistory() {
+        Payment payment = new Payment();
+        payment.setId(100L);
+        payment.setCustomer(customer);
+        payment.setStatus(Payment.Status.COMPLETED);
+        payment.setPaymentMethod(Payment.PaymentMethod.values()[0]);
+
+        when(paymentRepository.findAllByCustomer_IdOrderByCreatedAtDesc(1L))
+                .thenReturn(List.of(payment));
+
+        var result = paymentService.getMyPayments();
+
+        assertEquals(1, result.size());
+        assertEquals(100L, result.get(0).getId());
+        assertEquals(Payment.Status.COMPLETED, result.get(0).getStatus());
+
+        verify(paymentRepository)
+                .findAllByCustomer_IdOrderByCreatedAtDesc(1L);
+    }
+
+
+    @Test
+    void confirmDemoPayment_shouldRejectMissingPayment() {
+        when(paymentRepository.findById(999L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> paymentService.confirmDemoPayment(999L)
+        );
+
+        verify(paymentRepository, never()).save(any(Payment.class));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void confirmDemoPayment_shouldRejectNonCustomer() {
+        customer.setRole(User.Role.ADMIN);
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> paymentService.confirmDemoPayment(100L)
+        );
+
+        verify(paymentRepository, never()).findById(any());
+        verify(paymentRepository, never()).save(any(Payment.class));
+        verify(userRepository, never()).save(any(User.class));
+    }
 
 }
