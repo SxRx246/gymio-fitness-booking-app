@@ -227,4 +227,22 @@ class PaymentServiceTest {
     }
 
 
+    @Test
+    void createMembershipPayment_shouldRejectNonCustomer() {
+        customer.setRole(User.Role.ADMIN);
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> paymentService.createMembershipPayment(
+                        10L,
+                        Payment.PaymentMethod.values()[0]
+                )
+        );
+
+        verify(membershipPlanRepository, never()).findById(any());
+        verify(paymentRepository, never()).save(any(Payment.class));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+
 }
