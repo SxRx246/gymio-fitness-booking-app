@@ -24,7 +24,7 @@ import java.util.List;
  * enforced through Spring Security.
  */
 @RestController
-@RequestMapping("/api/membership-plans")
+@RequestMapping("/membership-plans")
 @RequiredArgsConstructor
 @Validated
 public class MembershipPlanController {
