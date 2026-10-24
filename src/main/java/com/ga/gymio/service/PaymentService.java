@@ -14,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -158,6 +159,22 @@ public class PaymentService {
         }
 
         payment.setStatus(Payment.Status.COMPLETED);
+
+        if (payment.getPaymentType() == Payment.PaymentType.MEMBERSHIP) {
+            MembershipPlan plan = payment.getMembershipPlan();
+
+            customer.setMembershipPlan(plan);
+            customer.setMembershipStatus(User.MembershipStatus.ACTIVE);
+
+            LocalDate startDate = LocalDate.now();
+
+            customer.setMembershipStartDate(startDate);
+            customer.setMembershipEndDate(
+                    startDate.plusDays(plan.getDurationByDays())
+            );
+
+            userRepository.save(customer);
+        }
 
         Payment savedPayment = paymentRepository.save(payment);
 
