@@ -189,4 +189,19 @@ public class PaymentService {
         );
     }
 
+    @Transactional
+    public void expireMemberships() {
+        List<User> expiredUsers =
+                userRepository.findByMembershipStatusAndMembershipEndDateBefore(
+                        User.MembershipStatus.ACTIVE,
+                        LocalDate.now()
+                );
+
+        for (User user : expiredUsers) {
+            user.setMembershipStatus(User.MembershipStatus.EXPIRED);
+        }
+
+        userRepository.saveAll(expiredUsers);
+    }
+
 }
