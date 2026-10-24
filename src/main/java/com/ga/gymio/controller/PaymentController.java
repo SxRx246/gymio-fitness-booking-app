@@ -1,4 +1,3 @@
-
 package com.ga.gymio.controller;
 
 import com.ga.gymio.dto.response.PaymentResponse;
@@ -8,9 +7,10 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/payments")
@@ -21,17 +21,21 @@ public class PaymentController {
 
     @PostMapping("/membership-plans/{planId}")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<PaymentResponse> createMembershipPayment(
+    @ResponseStatus(HttpStatus.CREATED)
+    public PaymentResponse createMembershipPayment(
             @PathVariable Long planId,
             @Valid @RequestBody CreatePaymentRequest request) {
 
-        PaymentResponse response =
-                paymentService.createMembershipPayment(
-                        planId,
-                        request.paymentMethod()
-                );
+        return paymentService.createMembershipPayment(
+                planId,
+                request.paymentMethod()
+        );
+    }
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    @GetMapping("/my")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public List<PaymentResponse> getMyPayments() {
+        return paymentService.getMyPayments();
     }
 
     public record CreatePaymentRequest(
