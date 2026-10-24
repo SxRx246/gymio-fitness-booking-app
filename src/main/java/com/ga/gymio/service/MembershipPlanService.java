@@ -230,4 +230,45 @@ public class MembershipPlanService {
         logger.info("Membership plan deactivated successfully with id {}", id);
     }
 
+    /**
+     * Reactivates an inactive membership plan after checking administrator permissions.
+     *
+     * @param id the ID of the membership plan to activate
+     */
+    @Transactional
+    public void activateMembershipPlan(Long id) {
+
+        logger.info("Activating membership plan with id {}", id);
+
+        User currentUser = getCurrentUser();
+
+        if (currentUser.getRole() != User.Role.ADMIN) {
+            throw new ForbiddenException(
+                    "Only administrators can activate membership plans"
+            );
+        }
+
+        MembershipPlan membershipPlan = membershipPlanRepository.findById(id)
+                .orElseThrow(() ->
+                        new InformationNotFoundException(
+                                "Membership plan with id " + id + " not found"
+                        )
+                );
+
+        if (membershipPlan.isActive()) {
+            throw new ConflictException(
+                    "Membership plan is already active"
+            );
+        }
+
+        membershipPlan.setActive(true);
+
+        membershipPlanRepository.save(membershipPlan);
+
+        logger.info(
+                "Membership plan activated successfully with id {}",
+                membershipPlan.getId()
+        );
+    }
+
 }
