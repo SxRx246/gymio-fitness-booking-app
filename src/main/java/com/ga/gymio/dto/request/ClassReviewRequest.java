@@ -3,6 +3,7 @@ package com.ga.gymio.dto.request;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -16,7 +17,7 @@ public class ClassReviewRequest {
     @Max(value = 5, message = "Rating cannot exceed 5")
     private Integer rating;
 
-    @Size(max = 2000, message = "Comment cannot exceed 2000 characters")g
+    @Size(max = 2000, message = "Comment cannot exceed 2000 characters")
     private String comment;
 
     @NotNull(message = "Booking ID is required")
