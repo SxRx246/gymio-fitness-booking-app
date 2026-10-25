@@ -12,12 +12,22 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Manages coupon creation, retrieval, updates, and deletion.
+ * Validates coupon rules and normalizes coupon codes.
+ */
 @Service
 @RequiredArgsConstructor
 public class CouponService {
 
     private final CouponRepository couponRepository;
 
+    /**
+     * Creates a coupon after validating its details and ensuring its code is unique.
+     *
+     * @param request the coupon details
+     * @return the created coupon
+     */
     @Transactional
     public CouponResponse createCoupon(CouponRequest request) {
         validateCoupon(request);
@@ -37,6 +47,13 @@ public class CouponService {
         return toResponse(couponRepository.save(coupon));
     }
 
+    /**
+     * Updates an existing coupon after validating its details and code uniqueness.
+     *
+     * @param id the ID of the coupon to update
+     * @param request the updated coupon details
+     * @return the updated coupon
+     */
     @Transactional
     public CouponResponse updateCoupon(Long id, CouponRequest request) {
         validateCoupon(request);
@@ -58,11 +75,22 @@ public class CouponService {
         return toResponse(couponRepository.save(coupon));
     }
 
+    /**
+     * Retrieves a coupon by its ID.
+     *
+     * @param id the coupon ID
+     * @return the requested coupon
+     */
     @Transactional(readOnly = true)
     public CouponResponse getCouponById(Long id) {
         return toResponse(getCouponEntity(id));
     }
 
+    /**
+     * Retrieves all coupons.
+     *
+     * @return a list of coupons
+     */
     @Transactional(readOnly = true)
     public List<CouponResponse> getAllCoupons() {
         return couponRepository.findAll()
@@ -71,6 +99,11 @@ public class CouponService {
                 .toList();
     }
 
+    /**
+     * Deletes a coupon by its ID.
+     *
+     * @param id the ID of the coupon to delete
+     */
     @Transactional
     public void deleteCoupon(Long id) {
         Coupon coupon = getCouponEntity(id);
