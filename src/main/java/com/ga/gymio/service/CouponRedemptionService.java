@@ -69,9 +69,12 @@ public class CouponRedemptionService {
         Long couponId = paidCoupon.getId();
         Long customerId = payment.getCustomer().getId();
 
-        Coupon coupon = couponRepository.findById(couponId)
+        Coupon coupon = couponRepository.findByIdAndActiveTrue(couponId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Coupon not found."));
+                        new IllegalArgumentException(
+                                "Coupon not found or is inactive."
+                        )
+                );
 
         if (couponRedemptionRepository
                 .existsByCoupon_IdAndCustomer_Id(couponId, customerId)) {
