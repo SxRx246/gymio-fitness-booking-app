@@ -4,9 +4,7 @@ import com.ga.gymio.authentication.MyUserDetails;
 import com.ga.gymio.model.MembershipPlan;
 import com.ga.gymio.model.Payment;
 import com.ga.gymio.model.User;
-import com.ga.gymio.repository.MembershipPlanRepository;
-import com.ga.gymio.repository.PaymentRepository;
-import com.ga.gymio.repository.UserRepository;
+import com.ga.gymio.repository.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +26,14 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentServiceTest {
+    @Mock
+    private CouponRedemptionService couponRedemptionService;
+
+    @Mock
+    private CouponRedemptionRepository couponRedemptionRepository;
+
+    @Mock
+    private CouponRepository couponRepository;
 
     @Mock
     private PaymentRepository paymentRepository;
@@ -103,6 +109,8 @@ class PaymentServiceTest {
 
         verify(userRepository).save(customer);
         verify(paymentRepository).save(payment);
+        verify(couponRedemptionService, never())
+                .redeemCouponAfterSuccessfulPayment(anyLong());
     }
 
     @Test
@@ -216,7 +224,8 @@ class PaymentServiceTest {
 
         paymentService.createMembershipPayment(
                 10L,
-                Payment.PaymentMethod.values()[0]
+                Payment.PaymentMethod.values()[0],
+                null
         );
 
         assertEquals(
@@ -248,9 +257,9 @@ class PaymentServiceTest {
                 IllegalStateException.class,
                 () -> paymentService.createMembershipPayment(
                         10L,
-                        Payment.PaymentMethod.values()[0]
-                )
-        );
+                        Payment.PaymentMethod.values()[0],
+                        null
+        ));
 
         verify(paymentRepository, never()).save(any(Payment.class));
         verify(userRepository, never()).save(any(User.class));
@@ -270,7 +279,8 @@ class PaymentServiceTest {
                 IllegalStateException.class,
                 () -> paymentService.createMembershipPayment(
                         10L,
-                        Payment.PaymentMethod.values()[0]
+                        Payment.PaymentMethod.values()[0],
+                        null
                 )
         );
 
@@ -289,7 +299,8 @@ class PaymentServiceTest {
                 IllegalArgumentException.class,
                 () -> paymentService.createMembershipPayment(
                         10L,
-                        Payment.PaymentMethod.values()[0]
+                        Payment.PaymentMethod.values()[0],
+                        null
                 )
         );
 
@@ -310,7 +321,8 @@ class PaymentServiceTest {
                 IllegalStateException.class,
                 () -> paymentService.createMembershipPayment(
                         10L,
-                        Payment.PaymentMethod.values()[0]
+                        Payment.PaymentMethod.values()[0],
+                        null
                 )
         );
 
@@ -332,7 +344,8 @@ class PaymentServiceTest {
 
         paymentService.createMembershipPayment(
                 10L,
-                Payment.PaymentMethod.values()[0]
+                Payment.PaymentMethod.values()[0],
+                null
         );
 
         verify(paymentRepository).save(argThat(payment ->
