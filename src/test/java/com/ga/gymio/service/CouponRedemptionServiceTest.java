@@ -73,14 +73,14 @@ class CouponRedemptionServiceTest {
         when(couponRedemptionRepository
                 .existsByCoupon_IdAndCustomer_Id(10L, 1L))
                 .thenReturn(false);
-
-        when(couponRedemptionRepository.save(any(CouponRedemption.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
     void redeemCoupon_shouldSaveRedemptionAndIncrementUsageCount() {
         mockPaymentAndCoupon();
+
+        when(couponRedemptionRepository.save(any(CouponRedemption.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         CouponRedemption result =
                 couponRedemptionService
