@@ -113,12 +113,25 @@ public class CouponService {
         return toResponse(couponRepository.save(coupon));
     }
 
+    /**
+     * Finds a coupon entity by its ID.
+     *
+     * @param id the ID of the coupon
+     * @return the matching coupon entity
+     * @throws IllegalArgumentException if no coupon exists with the given ID
+     */
     private Coupon getCouponEntity(Long id) {
         return couponRepository.findById(id)
                 .orElseThrow(() ->
                         new IllegalArgumentException("Coupon not found."));
     }
 
+    /**
+     * Validates the required coupon details and business rules.
+     *
+     * @param request the coupon details to validate
+     * @throws IllegalArgumentException if a required value is missing or a rule is violated
+     */
     private void validateCoupon(CouponRequest request) {
         if (request == null) {
             throw new IllegalArgumentException("Coupon request is required.");
@@ -171,6 +184,12 @@ public class CouponService {
         }
     }
 
+    /**
+     * Copies the editable fields from a request to a coupon entity.
+     *
+     * @param coupon the coupon entity to update
+     * @param request the request containing the new field values
+     */
     private void applyRequest(Coupon coupon, CouponRequest request) {
         coupon.setDescription(request.getDescription());
         coupon.setDiscountType(request.getDiscountType());
@@ -180,10 +199,22 @@ public class CouponService {
         coupon.setExpiresAt(request.getExpiresAt());
     }
 
+    /**
+     * Trims a coupon code and converts it to uppercase using a locale-independent rule.
+     *
+     * @param code the original coupon code
+     * @return the normalized coupon code
+     */
     private String normalizeCode(String code) {
         return code.trim().toUpperCase(Locale.ROOT);
     }
 
+    /**
+     * Converts a coupon entity into its response DTO.
+     *
+     * @param coupon the coupon entity to convert
+     * @return the corresponding coupon response
+     */
     private CouponResponse toResponse(Coupon coupon) {
         return new CouponResponse(
                 coupon.getId(),
@@ -201,6 +232,13 @@ public class CouponService {
         );
     }
 
+    /**
+     * Retrieves the first active coupon that is currently valid and has remaining uses.
+     * A coupon is eligible when its start date has been reached, its expiration time
+     * has not been reached, and its usage count is below its usage limit.
+     *
+     * @return an optional containing an eligible coupon, or empty if none is available
+     */
     @Transactional(readOnly = true)
     public java.util.Optional<CouponResponse> getAvailableCoupon() {
         LocalDateTime now = LocalDateTime.now();
