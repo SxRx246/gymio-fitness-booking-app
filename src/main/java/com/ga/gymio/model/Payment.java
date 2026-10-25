@@ -82,4 +82,8 @@ public class Payment {
     @JoinColumn(name = "membership_plan_id")
     private MembershipPlan membershipPlan;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "coupon_id")
+    private Coupon coupon;
+
 }
