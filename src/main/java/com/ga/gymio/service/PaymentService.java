@@ -199,9 +199,14 @@ public class PaymentService {
                     "Only customers can confirm demo payments.");
         }
 
-        Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Payment not found."));
+        Payment payment = paymentRepository.findByIdAndStatus(
+                paymentId,
+                Payment.Status.PENDING
+        ).orElseThrow(() ->
+                new IllegalArgumentException(
+                        "Payment not found or is not pending."
+                )
+        );
 
         if (!payment.getCustomer().getId().equals(customer.getId())) {
             throw new IllegalStateException(
