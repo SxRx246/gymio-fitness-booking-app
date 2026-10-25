@@ -100,14 +100,17 @@ public class CouponService {
     }
 
     /**
-     * Deletes a coupon by its ID.
+     * Deactivates a coupon without permanently deleting it.
      *
-     * @param id the ID of the coupon to delete
+     * @param id the ID of the coupon to deactivate
+     * @return the deactivated coupon
      */
     @Transactional
-    public void deleteCoupon(Long id) {
+    public CouponResponse deactivateCoupon(Long id) {
         Coupon coupon = getCouponEntity(id);
-        couponRepository.delete(coupon);
+        coupon.setActive(false);
+
+        return toResponse(couponRepository.save(coupon));
     }
 
     private Coupon getCouponEntity(Long id) {
