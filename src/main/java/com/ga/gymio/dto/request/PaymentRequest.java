@@ -23,4 +23,7 @@ public class PaymentRequest {
     @Positive(message = "Membership plan ID must be positive")
     private Long membershipPlanId;
 
+    @Positive(message = "Coupon ID must be positive.")
+    private Long couponId;
+
 }
