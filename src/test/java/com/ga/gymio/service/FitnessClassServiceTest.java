@@ -31,6 +31,10 @@ import static org.mockito.Mockito.*;
 class FitnessClassServiceTest {
 
     @Mock
+    private NotificationService notificationService;
+
+
+    @Mock
     private FitnessClassRepository fitnessClassRepository;
 
     @Mock

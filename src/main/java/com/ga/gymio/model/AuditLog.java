@@ -50,7 +50,15 @@ public class AuditLog {
         CREATE_MEMBERSHIP_PLAN,
         UPDATE_MEMBERSHIP_PLAN,
         DEACTIVATE_MEMBERSHIP_PLAN,
-        ACTIVATE_MEMBERSHIP_PLAN
+        ACTIVATE_MEMBERSHIP_PLAN,
+
+        ASSIGN_MEMBERSHIP,
+        CHANGE_MEMBERSHIP,
+        FREEZE_MEMBERSHIP,
+        RESUME_MEMBERSHIP,
+        CANCEL_MEMBERSHIP,
+        RENEW_MEMBERSHIP,
+        EXPIRE_MEMBERSHIP
     }
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

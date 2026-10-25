@@ -31,6 +31,7 @@ public class User {
     private String email;
 
     @JsonIgnore
+    @Column(nullable = false)
     private String password;
 
     public enum Role {
@@ -52,20 +53,27 @@ public class User {
     public enum MembershipStatus {
         PENDING,
         ACTIVE,
+        FROZEN,
         EXPIRED,
         CANCELLED
     }
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "membership_status")
+    private MembershipStatus membershipStatus;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "membership_plan_id")
     private MembershipPlan membershipPlan;
 
+    @Column(name = "membership_start_date")
     private LocalDate membershipStartDate;
 
+    @Column(name = "membership_end_date")
     private LocalDate membershipEndDate;
 
-    @Enumerated(EnumType.STRING)
-    private MembershipStatus membershipStatus;
+    @Column(name = "membership_frozen_at")
+    private LocalDate membershipFrozenAt;
 
     @JsonIgnore
     private String verificationToken;
