@@ -1,0 +1,256 @@
+package com.ga.gymio.service;
+
+import com.ga.gymio.dto.request.CouponRequest;
+import com.ga.gymio.dto.response.CouponResponse;
+import com.ga.gymio.model.Coupon;
+import com.ga.gymio.repository.CouponRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * Manages coupon creation, retrieval, updates, and deletion.
+ * Validates coupon rules and normalizes coupon codes.
+ */
+@Service
+@RequiredArgsConstructor
+public class CouponService {
+
+    private final CouponRepository couponRepository;
+
+    /**
+     * Creates a coupon after validating its details and ensuring its code is unique.
+     *
+     * @param request the coupon details
+     * @return the created coupon
+     */
+    @Transactional
+    public CouponResponse createCoupon(CouponRequest request) {
+        validateCoupon(request);
+
+        String code = normalizeCode(request.getCode());
+
+        if (couponRepository.existsByCode(code)) {
+            throw new IllegalArgumentException("Coupon code already exists.");
+        }
+
+        Coupon coupon = new Coupon();
+        applyRequest(coupon, request);
+        coupon.setCode(code);
+        coupon.setUsedCount(0);
+        coupon.setActive(true);
+
+        return toResponse(couponRepository.save(coupon));
+    }
+
+    /**
+     * Updates an existing coupon after validating its details and code uniqueness.
+     *
+     * @param id the ID of the coupon to update
+     * @param request the updated coupon details
+     * @return the updated coupon
+     */
+    @Transactional
+    public CouponResponse updateCoupon(Long id, CouponRequest request) {
+        validateCoupon(request);
+
+        Coupon coupon = getCouponEntity(id);
+        String code = normalizeCode(request.getCode());
+
+        couponRepository.findByCode(code)
+                .filter(existing -> !existing.getId().equals(id))
+                .ifPresent(existing -> {
+                    throw new IllegalArgumentException(
+                            "Coupon code already exists."
+                    );
+                });
+
+        applyRequest(coupon, request);
+        coupon.setCode(code);
+
+        return toResponse(couponRepository.save(coupon));
+    }
+
+    /**
+     * Retrieves a coupon by its ID.
+     *
+     * @param id the coupon ID
+     * @return the requested coupon
+     */
+    @Transactional(readOnly = true)
+    public CouponResponse getCouponById(Long id) {
+        return toResponse(getCouponEntity(id));
+    }
+
+    /**
+     * Retrieves all coupons.
+     *
+     * @return a list of coupons
+     */
+    @Transactional(readOnly = true)
+    public List<CouponResponse> getAllCoupons() {
+        return couponRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    /**
+     * Deactivates a coupon without permanently deleting it.
+     *
+     * @param id the ID of the coupon to deactivate
+     * @return the deactivated coupon
+     */
+    @Transactional
+    public CouponResponse deactivateCoupon(Long id) {
+        Coupon coupon = getCouponEntity(id);
+        coupon.setActive(false);
+
+        return toResponse(couponRepository.save(coupon));
+    }
+
+    /**
+     * Finds a coupon entity by its ID.
+     *
+     * @param id the ID of the coupon
+     * @return the matching coupon entity
+     * @throws IllegalArgumentException if no coupon exists with the given ID
+     */
+    private Coupon getCouponEntity(Long id) {
+        return couponRepository.findById(id)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Coupon not found."));
+    }
+
+    /**
+     * Validates the required coupon details and business rules.
+     *
+     * @param request the coupon details to validate
+     * @throws IllegalArgumentException if a required value is missing or a rule is violated
+     */
+    private void validateCoupon(CouponRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Coupon request is required.");
+        }
+
+        if (request.getDiscountType() == null) {
+            throw new IllegalArgumentException("Discount type is required.");
+        }
+
+        if (request.getDiscountValue() == null
+                || request.getDiscountValue().signum() <= 0) {
+            throw new IllegalArgumentException(
+                    "Discount value must be greater than zero."
+            );
+        }
+
+        if (request.getDiscountType() == Coupon.DiscountType.PERCENTAGE
+                && request.getDiscountValue()
+                .compareTo(new java.math.BigDecimal("100")) > 0) {
+            throw new IllegalArgumentException(
+                    "Percentage discount cannot exceed 100."
+            );
+        }
+
+        if (request.getUsageLimit() == null
+                || request.getUsageLimit() < 1) {
+            throw new IllegalArgumentException(
+                    "Usage limit must be at least one."
+            );
+        }
+
+        LocalDateTime startDate = request.getStartDate();
+        LocalDateTime expiresAt = request.getExpiresAt();
+
+        if (startDate == null || expiresAt == null) {
+            throw new IllegalArgumentException(
+                    "Start date and expiration date are required."
+            );
+        }
+
+        if (!expiresAt.isAfter(startDate)) {
+            throw new IllegalArgumentException(
+                    "Expiration date must be after the start date."
+            );
+        }
+
+        if (request.getCode() == null
+                || request.getCode().isBlank()) {
+            throw new IllegalArgumentException("Coupon code is required.");
+        }
+    }
+
+    /**
+     * Copies the editable fields from a request to a coupon entity.
+     *
+     * @param coupon the coupon entity to update
+     * @param request the request containing the new field values
+     */
+    private void applyRequest(Coupon coupon, CouponRequest request) {
+        coupon.setDescription(request.getDescription());
+        coupon.setDiscountType(request.getDiscountType());
+        coupon.setDiscountValue(request.getDiscountValue());
+        coupon.setUsageLimit(request.getUsageLimit());
+        coupon.setStartDate(request.getStartDate());
+        coupon.setExpiresAt(request.getExpiresAt());
+    }
+
+    /**
+     * Trims a coupon code and converts it to uppercase using a locale-independent rule.
+     *
+     * @param code the original coupon code
+     * @return the normalized coupon code
+     */
+    private String normalizeCode(String code) {
+        return code.trim().toUpperCase(Locale.ROOT);
+    }
+
+    /**
+     * Converts a coupon entity into its response DTO.
+     *
+     * @param coupon the coupon entity to convert
+     * @return the corresponding coupon response
+     */
+    private CouponResponse toResponse(Coupon coupon) {
+        return new CouponResponse(
+                coupon.getId(),
+                coupon.getDescription(),
+                coupon.getCode(),
+                coupon.getDiscountType(),
+                coupon.getDiscountValue(),
+                coupon.getUsageLimit(),
+                coupon.getUsedCount(),
+                coupon.getStartDate(),
+                coupon.getExpiresAt(),
+                coupon.isActive(),
+                coupon.getCreatedAt(),
+                coupon.getUpdatedAt()
+        );
+    }
+
+    /**
+     * Retrieves the first active coupon that is currently valid and has remaining uses.
+     * A coupon is eligible when its start date has been reached, its expiration time
+     * has not been reached, and its usage count is below its usage limit.
+     *
+     * @return an optional containing an eligible coupon, or empty if none is available
+     */
+    @Transactional(readOnly = true)
+    public java.util.Optional<CouponResponse> getAvailableCoupon() {
+        LocalDateTime now = LocalDateTime.now();
+
+        return couponRepository.findByActiveTrue()
+                .stream()
+                .filter(coupon -> !now.isBefore(coupon.getStartDate()))
+                .filter(coupon -> now.isBefore(coupon.getExpiresAt()))
+                .filter(coupon ->
+                        coupon.getUsedCount() < coupon.getUsageLimit())
+                .findFirst()
+                .map(this::toResponse);
+    }
+
+}

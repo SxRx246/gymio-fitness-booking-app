@@ -1,5 +1,6 @@
 package com.ga.gymio.controller;
 
+import com.ga.gymio.dto.request.PaymentRequest;
 import com.ga.gymio.dto.response.PaymentResponse;
 import com.ga.gymio.model.Payment;
 import com.ga.gymio.service.PaymentService;
@@ -24,11 +25,12 @@ public class PaymentController {
     @ResponseStatus(HttpStatus.CREATED)
     public PaymentResponse createMembershipPayment(
             @PathVariable Long planId,
-            @Valid @RequestBody CreatePaymentRequest request) {
+            @Valid @RequestBody PaymentRequest request) {
 
         return paymentService.createMembershipPayment(
                 planId,
-                request.paymentMethod()
+                request.getPaymentMethod(),
+                request.getCouponId()
         );
     }
 
@@ -38,8 +40,4 @@ public class PaymentController {
         return paymentService.getMyPayments();
     }
 
-    public record CreatePaymentRequest(
-            @NotNull(message = "Payment method is required.")
-            Payment.PaymentMethod paymentMethod) {
-    }
 }
