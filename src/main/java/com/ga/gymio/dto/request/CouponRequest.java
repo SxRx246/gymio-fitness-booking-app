@@ -27,6 +27,11 @@ public class CouponRequest {
             value = "0.01",
             message = "Discount value must be greater than zero"
     )
+    @Digits(
+            integer = 8,
+            fraction = 2,
+            message = "Discount value must have at most 8 integer digits and 2 decimal places"
+    )
     private BigDecimal discountValue;
 
     @NotNull(message = "Usage limit is required")
@@ -34,6 +39,7 @@ public class CouponRequest {
     private Integer usageLimit;
 
     @NotNull(message = "Start date is required")
+    @FutureOrPresent(message = "Start date cannot be in the past")
     private LocalDateTime startDate;
 
     @NotNull(message = "Expiration date is required")
