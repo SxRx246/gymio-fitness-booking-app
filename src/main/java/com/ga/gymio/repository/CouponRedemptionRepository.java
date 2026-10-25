@@ -15,4 +15,8 @@ public interface CouponRedemptionRepository extends JpaRepository<CouponRedempti
     List<CouponRedemption> findAllByCustomer_IdOrderByRedeemedAtDesc(Long customerId);
 
     long countByCoupon_Id(Long couponId);
+
+    Optional<CouponRedemption> findByPayment_Id(Long paymentId);
+
+    boolean existsByPayment_Id(Long paymentId);
 }

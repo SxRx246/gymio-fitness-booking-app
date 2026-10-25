@@ -23,6 +23,10 @@ import java.time.LocalDateTime;
                 @UniqueConstraint(
                         name = "uk_coupon_redemption_customer",
                         columnNames = {"coupon_id", "customer_id"}
+                ),
+                @UniqueConstraint(
+                        name = "uk_coupon_redemption_payment",
+                        columnNames = {"payment_id"}
                 )
         }
 )
@@ -39,6 +43,10 @@ public class CouponRedemption {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "customer_id", nullable = false)
     private User customer;
+
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "payment_id", nullable = false)
+    private Payment payment;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
