@@ -90,7 +90,8 @@ class PaymentServiceTest {
         payment.setStatus(Payment.Status.PENDING);
         payment.setProviderName("GYMIO_DEMO");
 
-        when(paymentRepository.findById(100L))
+        when(paymentRepository.findByIdAndStatus(
+                100L, Payment.Status.PENDING))
                 .thenReturn(Optional.of(payment));
         when(paymentRepository.save(payment))
                 .thenReturn(payment);
@@ -123,11 +124,12 @@ class PaymentServiceTest {
         payment.setStatus(Payment.Status.COMPLETED);
         payment.setProviderName("GYMIO_DEMO");
 
-        when(paymentRepository.findById(100L))
-                .thenReturn(Optional.of(payment));
+        when(paymentRepository.findByIdAndStatus(
+                100L, Payment.Status.PENDING))
+                .thenReturn(Optional.empty());
 
         assertThrows(
-                IllegalStateException.class,
+                IllegalArgumentException.class,
                 () -> paymentService.confirmDemoPayment(100L)
         );
 
@@ -150,7 +152,8 @@ class PaymentServiceTest {
         payment.setStatus(Payment.Status.PENDING);
         payment.setProviderName("GYMIO_DEMO");
 
-        when(paymentRepository.findById(100L))
+        when(paymentRepository.findByIdAndStatus(
+                100L, Payment.Status.PENDING))
                 .thenReturn(Optional.of(payment));
 
         IllegalStateException exception = assertThrows(
@@ -183,7 +186,8 @@ class PaymentServiceTest {
         payment.setStatus(Payment.Status.PENDING);
         payment.setProviderName("OTHER_PROVIDER");
 
-        when(paymentRepository.findById(100L))
+        when(paymentRepository.findByIdAndStatus(
+                100L, Payment.Status.PENDING))
                 .thenReturn(Optional.of(payment));
 
         assertThrows(
@@ -208,7 +212,8 @@ class PaymentServiceTest {
                 () -> paymentService.confirmDemoPayment(100L)
         );
 
-        verify(paymentRepository, never()).findById(any());
+        verify(paymentRepository, never())
+                .findByIdAndStatus(anyLong(), any(Payment.Status.class));
         verify(paymentRepository, never()).save(any(Payment.class));
         verify(userRepository, never()).save(any(User.class));
     }
@@ -417,7 +422,8 @@ class PaymentServiceTest {
 
     @Test
     void confirmDemoPayment_shouldRejectMissingPayment() {
-        when(paymentRepository.findById(999L))
+        when(paymentRepository.findByIdAndStatus(
+                999L, Payment.Status.PENDING))
                 .thenReturn(Optional.empty());
 
         assertThrows(
@@ -438,7 +444,8 @@ class PaymentServiceTest {
                 () -> paymentService.confirmDemoPayment(100L)
         );
 
-        verify(paymentRepository, never()).findById(any());
+        verify(paymentRepository, never())
+                .findByIdAndStatus(anyLong(), any(Payment.Status.class));
         verify(paymentRepository, never()).save(any(Payment.class));
         verify(userRepository, never()).save(any(User.class));
     }

@@ -67,7 +67,7 @@ class CouponRedemptionServiceTest {
         when(paymentRepository.findById(100L))
                 .thenReturn(Optional.of(payment));
 
-        when(couponRepository.findById(10L))
+        when(couponRepository.findByIdAndActiveTrue(10L))
                 .thenReturn(Optional.of(coupon));
 
         when(couponRedemptionRepository
@@ -155,7 +155,7 @@ class CouponRedemptionServiceTest {
         when(paymentRepository.findById(100L))
                 .thenReturn(Optional.of(payment));
 
-        when(couponRepository.findById(10L))
+        when(couponRepository.findByIdAndActiveTrue(10L))
                 .thenReturn(Optional.of(coupon));
 
         when(couponRedemptionRepository
@@ -190,16 +190,23 @@ class CouponRedemptionServiceTest {
                 .save(any(CouponRedemption.class));
     }
 
+
     @Test
     void redeemCoupon_shouldRejectInactiveCoupon() {
         coupon.setActive(false);
-        mockPaymentAndCoupon();
 
-        assertThrows(IllegalStateException.class,
+        when(paymentRepository.findById(100L))
+                .thenReturn(Optional.of(payment));
+
+        when(couponRepository.findByIdAndActiveTrue(10L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class,
                 () -> couponRedemptionService
                         .redeemCouponAfterSuccessfulPayment(100L));
 
         assertEquals(0, coupon.getUsedCount());
+
         verify(couponRepository, never()).save(any(Coupon.class));
         verify(couponRedemptionRepository, never())
                 .save(any(CouponRedemption.class));
@@ -240,13 +247,14 @@ class CouponRedemptionServiceTest {
         when(paymentRepository.findById(100L))
                 .thenReturn(Optional.of(payment));
 
-        when(couponRepository.findById(10L))
+        when(couponRepository.findByIdAndActiveTrue(10L))
                 .thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class,
                 () -> couponRedemptionService
                         .redeemCouponAfterSuccessfulPayment(100L));
 
+        verify(couponRepository, never()).save(any(Coupon.class));
         verify(couponRedemptionRepository, never())
                 .save(any(CouponRedemption.class));
     }
