@@ -130,6 +130,7 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any(Payment.class));
     }
 
+
     @Test
     void confirmDemoPayment_shouldRejectAnotherCustomersPayment() {
         User anotherCustomer = new User();
@@ -144,16 +145,26 @@ class PaymentServiceTest {
         when(paymentRepository.findById(100L))
                 .thenReturn(Optional.of(payment));
 
-        assertThrows(
+        IllegalStateException exception = assertThrows(
                 IllegalStateException.class,
                 () -> paymentService.confirmDemoPayment(100L)
         );
 
+        assertEquals(
+                "You cannot confirm another customer's payment.",
+                exception.getMessage()
+        );
+
+        assertEquals(Payment.Status.PENDING, payment.getStatus());
+
         assertEquals(User.MembershipStatus.EXPIRED,
                 customer.getMembershipStatus());
+        assertNull(customer.getMembershipPlan());
+        assertNull(customer.getMembershipStartDate());
+        assertNull(customer.getMembershipEndDate());
 
-        verify(userRepository, never()).save(any(User.class));
         verify(paymentRepository, never()).save(any(Payment.class));
+        verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
@@ -212,6 +223,10 @@ class PaymentServiceTest {
                 User.MembershipStatus.EXPIRED,
                 customer.getMembershipStatus()
         );
+
+        assertNull(customer.getMembershipPlan());
+        assertNull(customer.getMembershipStartDate());
+        assertNull(customer.getMembershipEndDate());
 
         verify(userRepository, never()).save(any(User.class));
 
