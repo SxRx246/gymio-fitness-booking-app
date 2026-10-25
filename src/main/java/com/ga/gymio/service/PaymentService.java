@@ -25,6 +25,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final MembershipPlanRepository membershipPlanRepository;
     private final UserRepository userRepository;
+    private final CouponRedemptionService couponRedemptionService;
 
     @Transactional
     public PaymentResponse createMembershipPayment(
@@ -159,6 +160,11 @@ public class PaymentService {
         }
 
         payment.setStatus(Payment.Status.COMPLETED);
+
+        if (payment.getCoupon() != null) {
+            couponRedemptionService
+                    .redeemCouponAfterSuccessfulPayment(payment.getId());
+        }
 
         if (payment.getPaymentType() == Payment.PaymentType.MEMBERSHIP) {
             MembershipPlan plan = payment.getMembershipPlan();
