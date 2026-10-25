@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -81,6 +82,22 @@ public class CouponRedemptionService {
         if (coupon.getUsedCount() >= coupon.getUsageLimit()) {
             throw new IllegalStateException(
                     "The coupon has reached its usage limit.");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        if (!coupon.isActive()) {
+            throw new IllegalStateException("This coupon is inactive.");
+        }
+
+        if (coupon.getStartDate() == null
+                || now.isBefore(coupon.getStartDate())) {
+            throw new IllegalStateException("This coupon is not available yet.");
+        }
+
+        if (coupon.getExpiresAt() == null
+                || !now.isBefore(coupon.getExpiresAt())) {
+            throw new IllegalStateException("This coupon has expired.");
         }
 
         CouponRedemption redemption = new CouponRedemption();
