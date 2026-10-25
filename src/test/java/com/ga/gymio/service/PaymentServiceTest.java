@@ -1,6 +1,7 @@
 package com.ga.gymio.service;
 
 import com.ga.gymio.authentication.MyUserDetails;
+import com.ga.gymio.model.Coupon;
 import com.ga.gymio.model.MembershipPlan;
 import com.ga.gymio.model.Payment;
 import com.ga.gymio.model.User;
@@ -17,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -448,6 +450,135 @@ class PaymentServiceTest {
                 .findByIdAndStatus(anyLong(), any(Payment.Status.class));
         verify(paymentRepository, never()).save(any(Payment.class));
         verify(userRepository, never()).save(any(User.class));
+    }
+
+    private Coupon createCoupon(
+            Coupon.DiscountType discountType,
+            BigDecimal discountValue) {
+
+        Coupon coupon = new Coupon();
+        coupon.setId(20L);
+        coupon.setActive(true);
+        coupon.setStartDate(LocalDateTime.now().minusDays(1));
+        coupon.setExpiresAt(LocalDateTime.now().plusDays(7));
+        coupon.setUsageLimit(100);
+        coupon.setUsedCount(0);
+        coupon.setDiscountType(discountType);
+        coupon.setDiscountValue(discountValue);
+
+        return coupon;
+    }
+
+    @Test
+    void createMembershipPayment_shouldApplyPercentageDiscount() {
+        Coupon coupon = createCoupon(
+                Coupon.DiscountType.PERCENTAGE,
+                new BigDecimal("20")
+        );
+
+        when(membershipPlanRepository.findById(10L))
+                .thenReturn(Optional.of(plan));
+
+        when(couponRepository.findByIdAndActiveTrue(20L))
+                .thenReturn(Optional.of(coupon));
+
+        when(couponRedemptionRepository
+                .existsByCoupon_IdAndCustomer_Id(20L, 1L))
+                .thenReturn(false);
+
+        when(paymentRepository.save(any(Payment.class)))
+                .thenAnswer(invocation -> {
+                    Payment payment = invocation.getArgument(0);
+                    payment.setId(100L);
+                    return payment;
+                });
+
+        paymentService.createMembershipPayment(
+                10L,
+                Payment.PaymentMethod.values()[0],
+                20L
+        );
+
+        verify(paymentRepository).save(argThat(payment ->
+                payment.getStatus() == Payment.Status.PENDING
+                        && payment.getCoupon() == coupon
+                        && payment.getAmount().compareTo(
+                        new BigDecimal("20.000")) == 0
+        ));
+
+        assertEquals(
+                User.MembershipStatus.EXPIRED,
+                customer.getMembershipStatus()
+        );
+
+        verify(couponRedemptionRepository, never())
+                .save(any());
+
+        verify(couponRedemptionService, never())
+                .redeemCouponAfterSuccessfulPayment(anyLong());
+    }
+
+    @Test
+    void createMembershipPayment_shouldApplyFixedDiscount() {
+        Coupon coupon = createCoupon(
+                Coupon.DiscountType.FIXED_AMOUNT,
+                new BigDecimal("5")
+        );
+
+        when(membershipPlanRepository.findById(10L))
+                .thenReturn(Optional.of(plan));
+
+        when(couponRepository.findByIdAndActiveTrue(20L))
+                .thenReturn(Optional.of(coupon));
+
+        when(couponRedemptionRepository
+                .existsByCoupon_IdAndCustomer_Id(20L, 1L))
+                .thenReturn(false);
+
+        when(paymentRepository.save(any(Payment.class)))
+                .thenAnswer(invocation -> {
+                    Payment payment = invocation.getArgument(0);
+                    payment.setId(101L);
+                    return payment;
+                });
+
+        paymentService.createMembershipPayment(
+                10L,
+                Payment.PaymentMethod.values()[0],
+                20L
+        );
+
+        verify(paymentRepository).save(argThat(payment ->
+                payment.getAmount().compareTo(
+                        new BigDecimal("20.000")) == 0
+                        && payment.getCoupon() == coupon
+                        && payment.getStatus() == Payment.Status.PENDING
+        ));
+
+        verify(couponRedemptionRepository, never())
+                .save(any());
+    }
+
+    @Test
+    void createMembershipPayment_shouldRejectMissingOrInactiveCoupon() {
+        when(membershipPlanRepository.findById(10L))
+                .thenReturn(Optional.of(plan));
+
+        when(couponRepository.findByIdAndActiveTrue(20L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> paymentService.createMembershipPayment(
+                        10L,
+                        Payment.PaymentMethod.values()[0],
+                        20L
+                )
+        );
+
+        verify(paymentRepository, never()).save(any(Payment.class));
+
+        verify(couponRedemptionRepository, never()).save(any());
     }
 
 }

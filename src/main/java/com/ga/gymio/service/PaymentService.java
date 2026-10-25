@@ -69,15 +69,12 @@ public class PaymentService {
         Coupon coupon = null;
 
         if (couponId != null) {
-            coupon = couponRepository.findById(couponId)
+            coupon = couponRepository.findByIdAndActiveTrue(couponId)
                     .orElseThrow(() ->
-                            new IllegalArgumentException("Coupon not found."));
+                            new IllegalArgumentException(
+                                    "Coupon not found or is inactive."));
 
             LocalDateTime now = LocalDateTime.now();
-
-            if (!coupon.isActive()) {
-                throw new IllegalStateException("This coupon is inactive.");
-            }
 
             if (coupon.getStartDate() == null
                     || now.isBefore(coupon.getStartDate())) {
