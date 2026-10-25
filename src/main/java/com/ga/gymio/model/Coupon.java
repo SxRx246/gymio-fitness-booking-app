@@ -17,7 +17,6 @@ import java.time.LocalDateTime;
  */
 @Getter
 @Setter
-@NoArgsConstructor
 @Entity
 @Table(name = "coupons")
 public class Coupon {
