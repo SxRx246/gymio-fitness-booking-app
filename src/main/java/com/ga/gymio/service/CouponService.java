@@ -200,4 +200,19 @@ public class CouponService {
                 coupon.getUpdatedAt()
         );
     }
+
+    @Transactional(readOnly = true)
+    public java.util.Optional<CouponResponse> getAvailableCoupon() {
+        LocalDateTime now = LocalDateTime.now();
+
+        return couponRepository.findByActiveTrue()
+                .stream()
+                .filter(coupon -> !now.isBefore(coupon.getStartDate()))
+                .filter(coupon -> now.isBefore(coupon.getExpiresAt()))
+                .filter(coupon ->
+                        coupon.getUsedCount() < coupon.getUsageLimit())
+                .findFirst()
+                .map(this::toResponse);
+    }
+
 }
