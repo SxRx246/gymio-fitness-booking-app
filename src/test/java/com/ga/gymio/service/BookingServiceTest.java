@@ -11,6 +11,7 @@ import com.ga.gymio.repository.FitnessClassRepository;
 import com.ga.gymio.service.AuditLogService;
 import com.ga.gymio.service.BookingService;
 import com.ga.gymio.service.EmailService;
+import com.ga.gymio.service.NotificationService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -31,6 +31,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class BookingServiceTest {
+    @Mock
+    private NotificationService notificationService;
 
     @Mock
     private BookingRepository bookingRepository;
@@ -53,6 +55,26 @@ class BookingServiceTest {
 
     @BeforeEach
     void setUp() {
+        bookingService = new BookingService(
+                bookingRepository,
+                fitnessClassRepository,
+                emailService,
+                auditLogService,
+                notificationService
+        );
+
+        assertNotNull(notificationService);
+        assertNotNull(bookingService);
+
+        try {
+            var field = BookingService.class
+                    .getDeclaredField("notificationService");
+            field.setAccessible(true);
+
+            assertSame(notificationService, field.get(bookingService));
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
 
         customer = new User();
         customer.setId(1L);
