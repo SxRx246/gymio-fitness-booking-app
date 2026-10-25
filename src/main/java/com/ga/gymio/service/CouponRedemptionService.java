@@ -48,8 +48,7 @@ public class CouponRedemptionService {
                 .orElseThrow(() ->
                         new IllegalArgumentException("Payment not found."));
 
-        if (payment.getStatus() == null
-                || !"COMPLETED".equals(payment.getStatus().name())) {
+        if (payment.getStatus() != Payment.Status.COMPLETED) {
             throw new IllegalStateException(
                     "Coupon redemption requires a successful payment.");
         }

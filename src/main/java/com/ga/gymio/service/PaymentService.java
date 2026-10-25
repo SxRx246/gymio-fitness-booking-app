@@ -218,11 +218,6 @@ public class PaymentService {
                     "This is not a demo payment.");
         }
 
-        if (payment.getStatus() != Payment.Status.PENDING) {
-            throw new IllegalStateException(
-                    "Only pending payments can be confirmed.");
-        }
-
         payment.setStatus(Payment.Status.COMPLETED);
 
         if (payment.getCoupon() != null) {
