@@ -266,7 +266,7 @@ class PaymentServiceTest {
                         10L,
                         Payment.PaymentMethod.values()[0],
                         null
-        ));
+                ));
 
         verify(paymentRepository, never()).save(any(Payment.class));
         verify(userRepository, never()).save(any(User.class));
@@ -580,5 +580,248 @@ class PaymentServiceTest {
 
         verify(couponRedemptionRepository, never()).save(any());
     }
+
+
+    @Test
+    void confirmDemoPayment_shouldRedeemCouponAndActivateMembership() {
+        Coupon coupon = createCoupon(
+                Coupon.DiscountType.PERCENTAGE,
+                new BigDecimal("20")
+        );
+
+        Payment payment = new Payment();
+        payment.setId(100L);
+        payment.setCustomer(customer);
+        payment.setMembershipPlan(plan);
+        payment.setPaymentType(Payment.PaymentType.MEMBERSHIP);
+        payment.setStatus(Payment.Status.PENDING);
+        payment.setProviderName("GYMIO_DEMO");
+        payment.setCoupon(coupon);
+
+        when(paymentRepository.findByIdAndStatus(
+                100L, Payment.Status.PENDING
+        )).thenReturn(Optional.of(payment));
+
+        when(paymentRepository.save(payment)).thenReturn(payment);
+
+        paymentService.confirmDemoPayment(100L);
+
+        assertEquals(Payment.Status.COMPLETED, payment.getStatus());
+        assertEquals(User.MembershipStatus.ACTIVE,
+                customer.getMembershipStatus());
+        assertEquals(plan, customer.getMembershipPlan());
+
+        verify(couponRedemptionService)
+                .redeemCouponAfterSuccessfulPayment(100L);
+        verify(userRepository).save(customer);
+        verify(paymentRepository).save(payment);
+    }
+
+
+    @Test
+    void confirmDemoPayment_shouldNotSavePaymentOrActivateMembershipWhenCouponRedemptionFails() {
+        Coupon coupon = createCoupon(
+                Coupon.DiscountType.PERCENTAGE,
+                new BigDecimal("20")
+        );
+
+        Payment payment = new Payment();
+        payment.setId(100L);
+        payment.setCustomer(customer);
+        payment.setMembershipPlan(plan);
+        payment.setPaymentType(Payment.PaymentType.MEMBERSHIP);
+        payment.setStatus(Payment.Status.PENDING);
+        payment.setProviderName("GYMIO_DEMO");
+        payment.setCoupon(coupon);
+
+        when(paymentRepository.findByIdAndStatus(
+                100L, Payment.Status.PENDING
+        )).thenReturn(Optional.of(payment));
+
+        doThrow(new IllegalStateException("Coupon redemption failed"))
+                .when(couponRedemptionService)
+                .redeemCouponAfterSuccessfulPayment(100L);
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> paymentService.confirmDemoPayment(100L)
+        );
+
+        verify(couponRedemptionService)
+                .redeemCouponAfterSuccessfulPayment(100L);
+        verify(userRepository, never()).save(any(User.class));
+        verify(paymentRepository, never()).save(any(Payment.class));
+
+        assertEquals(User.MembershipStatus.EXPIRED,
+                customer.getMembershipStatus());
+        assertNull(customer.getMembershipPlan());
+        assertNull(customer.getMembershipStartDate());
+        assertNull(customer.getMembershipEndDate());
+    }
+
+
+    @Test
+    void confirmDemoPayment_shouldRejectMembershipPaymentWithoutPlan() {
+        Payment payment = new Payment();
+        payment.setId(100L);
+        payment.setCustomer(customer);
+        payment.setPaymentType(Payment.PaymentType.MEMBERSHIP);
+        payment.setStatus(Payment.Status.PENDING);
+        payment.setProviderName("GYMIO_DEMO");
+
+        when(paymentRepository.findByIdAndStatus(
+                100L, Payment.Status.PENDING))
+                .thenReturn(Optional.of(payment));
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> paymentService.confirmDemoPayment(100L)
+        );
+
+        verify(userRepository, never()).save(any(User.class));
+        verify(paymentRepository, never()).save(any(Payment.class));
+
+        assertEquals(User.MembershipStatus.EXPIRED,
+                customer.getMembershipStatus());
+        assertNull(customer.getMembershipPlan());
+        assertNull(customer.getMembershipStartDate());
+        assertNull(customer.getMembershipEndDate());
+    }
+
+    @Test
+    void confirmDemoPayment_shouldNotActivateMembershipForBookingPayment() {
+        Payment payment = new Payment();
+        payment.setId(101L);
+        payment.setCustomer(customer);
+        payment.setPaymentType(Payment.PaymentType.BOOKING);
+        payment.setStatus(Payment.Status.PENDING);
+        payment.setProviderName("GYMIO_DEMO");
+
+        when(paymentRepository.findByIdAndStatus(
+                101L, Payment.Status.PENDING))
+                .thenReturn(Optional.of(payment));
+        when(paymentRepository.save(payment))
+                .thenReturn(payment);
+
+        paymentService.confirmDemoPayment(101L);
+
+        assertEquals(Payment.Status.COMPLETED, payment.getStatus());
+
+        assertEquals(User.MembershipStatus.EXPIRED,
+                customer.getMembershipStatus());
+        assertNull(customer.getMembershipPlan());
+        assertNull(customer.getMembershipStartDate());
+        assertNull(customer.getMembershipEndDate());
+
+        verify(paymentRepository).save(payment);
+        verify(userRepository, never()).save(any(User.class));
+        verify(couponRedemptionService, never())
+                .redeemCouponAfterSuccessfulPayment(anyLong());
+    }
+
+    @Test
+    void createMembershipPayment_shouldRejectCouponThatHasNotStarted() {
+        Coupon coupon = createCoupon(
+                Coupon.DiscountType.PERCENTAGE,
+                new BigDecimal("20")
+        );
+        coupon.setStartDate(LocalDateTime.now().plusDays(1));
+
+        when(membershipPlanRepository.findById(10L))
+                .thenReturn(Optional.of(plan));
+        when(couponRepository.findByIdAndActiveTrue(20L))
+                .thenReturn(Optional.of(coupon));
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> paymentService.createMembershipPayment(
+                        10L,
+                        Payment.PaymentMethod.values()[0],
+                        20L
+                )
+        );
+
+        verify(paymentRepository, never()).save(any(Payment.class));
+    }
+
+    @Test
+    void createMembershipPayment_shouldRejectExpiredCoupon() {
+        Coupon coupon = createCoupon(
+                Coupon.DiscountType.PERCENTAGE,
+                new BigDecimal("20")
+        );
+        coupon.setExpiresAt(LocalDateTime.now().minusDays(1));
+
+        when(membershipPlanRepository.findById(10L))
+                .thenReturn(Optional.of(plan));
+        when(couponRepository.findByIdAndActiveTrue(20L))
+                .thenReturn(Optional.of(coupon));
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> paymentService.createMembershipPayment(
+                        10L,
+                        Payment.PaymentMethod.values()[0],
+                        20L
+                )
+        );
+
+        verify(paymentRepository, never()).save(any(Payment.class));
+    }
+
+    @Test
+    void createMembershipPayment_shouldRejectCouponAtUsageLimit() {
+        Coupon coupon = createCoupon(
+                Coupon.DiscountType.PERCENTAGE,
+                new BigDecimal("20")
+        );
+        coupon.setUsageLimit(5);
+        coupon.setUsedCount(5);
+
+        when(membershipPlanRepository.findById(10L))
+                .thenReturn(Optional.of(plan));
+        when(couponRepository.findByIdAndActiveTrue(20L))
+                .thenReturn(Optional.of(coupon));
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> paymentService.createMembershipPayment(
+                        10L,
+                        Payment.PaymentMethod.values()[0],
+                        20L
+                )
+        );
+
+        verify(paymentRepository, never()).save(any(Payment.class));
+    }
+
+    @Test
+    void createMembershipPayment_shouldRejectPreviouslyRedeemedCoupon() {
+        Coupon coupon = createCoupon(
+                Coupon.DiscountType.PERCENTAGE,
+                new BigDecimal("20")
+        );
+
+        when(membershipPlanRepository.findById(10L))
+                .thenReturn(Optional.of(plan));
+        when(couponRepository.findByIdAndActiveTrue(20L))
+                .thenReturn(Optional.of(coupon));
+        when(couponRedemptionRepository
+                .existsByCoupon_IdAndCustomer_Id(20L, 1L))
+                .thenReturn(true);
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> paymentService.createMembershipPayment(
+                        10L,
+                        Payment.PaymentMethod.values()[0],
+                        20L
+                )
+        );
+
+        verify(paymentRepository, never()).save(any(Payment.class));
+    }
+
+
 
 }

@@ -40,9 +40,9 @@ public class CouponRedemptionService {
      *                                has already redeemed the coupon, or the
      *                                coupon has reached its usage limit
      */
+
     @Transactional
-    public CouponRedemption redeemCouponAfterSuccessfulPayment(
-            Long paymentId) {
+    public CouponRedemption redeemCouponAfterSuccessfulPayment(Long paymentId) {
 
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() ->
@@ -52,6 +52,19 @@ public class CouponRedemptionService {
             throw new IllegalStateException(
                     "Coupon redemption requires a successful payment.");
         }
+
+        // Return the existing redemption if this payment was already processed.
+        var existingRedemption =
+                couponRedemptionRepository.findByPayment_Id(paymentId);
+
+        if (existingRedemption.isPresent()) {
+            return existingRedemption.get();
+        }
+
+        return createCouponRedemption(payment);
+    }
+
+    private CouponRedemption createCouponRedemption(Payment payment) {
 
         if (payment.getCustomer() == null) {
             throw new IllegalStateException(
@@ -71,9 +84,7 @@ public class CouponRedemptionService {
         Coupon coupon = couponRepository.findByIdAndActiveTrue(couponId)
                 .orElseThrow(() ->
                         new IllegalArgumentException(
-                                "Coupon not found or is inactive."
-                        )
-                );
+                                "Coupon not found or is inactive."));
 
         if (couponRedemptionRepository
                 .existsByCoupon_IdAndCustomer_Id(couponId, customerId)) {
@@ -94,7 +105,8 @@ public class CouponRedemptionService {
 
         if (coupon.getStartDate() == null
                 || now.isBefore(coupon.getStartDate())) {
-            throw new IllegalStateException("This coupon is not available yet.");
+            throw new IllegalStateException(
+                    "This coupon is not available yet.");
         }
 
         if (coupon.getExpiresAt() == null
@@ -105,12 +117,14 @@ public class CouponRedemptionService {
         CouponRedemption redemption = new CouponRedemption();
         redemption.setCoupon(coupon);
         redemption.setCustomer(payment.getCustomer());
+        redemption.setPayment(payment);
 
         coupon.setUsedCount(coupon.getUsedCount() + 1);
         couponRepository.save(coupon);
 
         return couponRedemptionRepository.save(redemption);
     }
+
 
     /**
      * Retrieves a customer's coupon redemption history, ordered from newest

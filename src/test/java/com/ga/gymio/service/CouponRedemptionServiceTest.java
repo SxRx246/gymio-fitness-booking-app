@@ -147,7 +147,10 @@ class CouponRedemptionServiceTest {
                 () -> couponRedemptionService
                         .redeemCouponAfterSuccessfulPayment(100L));
 
-        verifyNoInteractions(couponRepository, couponRedemptionRepository);
+        verify(couponRedemptionRepository).findByPayment_Id(payment.getId());
+        verify(couponRepository, never()).save(any(Coupon.class));
+        verify(couponRedemptionRepository, never())
+                .save(any(CouponRedemption.class));
     }
 
     @Test
