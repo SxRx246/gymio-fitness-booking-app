@@ -47,6 +47,8 @@ public class WaitlistEntry {
 
     private LocalDateTime notifiedAt;
 
+    private LocalDateTime offerExpiresAt;
+
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;
