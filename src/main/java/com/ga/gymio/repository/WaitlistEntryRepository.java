@@ -10,7 +10,11 @@ import java.util.Optional;
 public interface WaitlistEntryRepository extends JpaRepository<WaitlistEntry, Long> {
     Optional<WaitlistEntry> findByCustomer_IdAndFitnessClass_Id(Long customerId, Long fitnessClassId);
 
-   List<WaitlistEntry> findAllByFitnessClass_IdAndStatusOrderByJoinedAtAsc(Long fitnessClassId, Status status);
+    List<WaitlistEntry> findAllByFitnessClass_IdAndStatusOrderByJoinedAtAsc(Long fitnessClassId, Status status);
 
-   boolean existsByCustomer_IdAndFitnessClass_Id(Long customerId, Long fitnessClassId);
+    List<WaitlistEntry> findAllByCustomer_IdOrderByJoinedAtDesc(Long customerId);
+
+    Optional<WaitlistEntry> findByIdAndCustomer_Id(Long id, Long customerId);
+
+    boolean existsByCustomer_IdAndFitnessClass_Id(Long customerId, Long fitnessClassId);
 }
