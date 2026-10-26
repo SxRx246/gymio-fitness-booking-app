@@ -16,4 +16,5 @@ public class WaitlistEntryResponse {
     private Status status;
     private LocalDateTime joinedAt;
     private LocalDateTime notifiedAt;
+    private LocalDateTime offerExpiresAt;
 }
