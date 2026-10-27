@@ -2,15 +2,18 @@ package com.ga.gymio.repository;
 
 import com.ga.gymio.model.FitnessClass;
 import com.ga.gymio.model.User;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface FitnessClassRepository extends JpaRepository<FitnessClass,Long> {
@@ -32,4 +35,8 @@ public interface FitnessClassRepository extends JpaRepository<FitnessClass,Long>
     List<FitnessClass> findByStatusAndStartTimeLessThanEqual( FitnessClass.Status status, LocalDateTime time );
 
     List<FitnessClass> findByStatusAndEndTimeLessThanEqual( FitnessClass.Status status, LocalDateTime time );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT f FROM FitnessClass f WHERE f.id = :id")
+    Optional<FitnessClass> findByIdForUpdate(@Param("id") Long id);
 }

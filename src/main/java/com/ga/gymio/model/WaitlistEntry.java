@@ -1,7 +1,6 @@
 package com.ga.gymio.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -38,7 +37,6 @@ public class WaitlistEntry {
         PROMOTED
     }
 
-    @NotNull(message = "Waitlist status is required")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Status status = Status.WAITING;
@@ -49,19 +47,18 @@ public class WaitlistEntry {
 
     private LocalDateTime notifiedAt;
 
+    private LocalDateTime offerExpiresAt;
+
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    @NotNull(message = "Customer is required")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "customer_id", nullable = false)
     private User customer;
 
-    @NotNull(message = "Fitness class is required")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "fitness_class_id", nullable = false)
     private FitnessClass fitnessClass;
-
 
 }

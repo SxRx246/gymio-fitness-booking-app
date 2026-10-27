@@ -37,6 +37,7 @@ public class BookingService {
     private final EmailService emailService;
     private final AuditLogService auditLogService;
     private final NotificationService notificationService;
+    private final WaitlistEntryService waitlistEntryService;
 
     private static final Logger logger =
             LoggerFactory.getLogger(BookingService.class);
@@ -58,7 +59,7 @@ public class BookingService {
         User currentUser = getCurrentUser();
 
         FitnessClass fitnessClass =
-                fitnessClassRepository.findById(fitnessClassId)
+                fitnessClassRepository.findByIdForUpdate(fitnessClassId)
                         .orElseThrow(() ->
                                 new InformationNotFoundException(
                                         "Fitness class with id "
@@ -102,9 +103,12 @@ public class BookingService {
                         Booking.Status.CONFIRMED
                 );
 
-        if (confirmedBookings >= fitnessClass.getCapacity()) {
+        long activeOffers =
+                waitlistEntryService.countActiveOffers(fitnessClassId);
+
+        if (confirmedBookings + activeOffers >= fitnessClass.getCapacity()) {
             throw new IllegalArgumentException(
-                    "This fitness class is fully booked"
+                    "This fitness class is full or its available places are reserved."
             );
         }
 
@@ -316,6 +320,10 @@ public class BookingService {
         booking.setStatus(Booking.Status.CANCELLED);
 
         bookingRepository.save(booking);
+
+        waitlistEntryService.notifyNextWaitingCustomer(
+                booking.getFitnessClass().getId()
+        );
 
         auditLogService.log(
                 AuditLog.Action.CANCEL_BOOKING,
