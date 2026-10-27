@@ -46,6 +46,9 @@ class BookingServiceTest {
     @Mock
     private AuditLogService auditLogService;
 
+    @Mock
+    private WaitlistEntryService waitlistEntryService;
+
     @InjectMocks
     private BookingService bookingService;
 
@@ -60,7 +63,8 @@ class BookingServiceTest {
                 fitnessClassRepository,
                 emailService,
                 auditLogService,
-                notificationService
+                notificationService,
+                waitlistEntryService
         );
 
         assertNotNull(notificationService);
