@@ -129,7 +129,7 @@ class BookingServiceTest {
     @Test
     void createBooking_shouldCreateBookingSuccessfully() {
 
-        when(fitnessClassRepository.findById(10L))
+        when(fitnessClassRepository.findByIdForUpdate(10L))
                 .thenReturn(Optional.of(fitnessClass));
 
         when(bookingRepository
@@ -141,6 +141,9 @@ class BookingServiceTest {
                         10L,
                         Booking.Status.CONFIRMED))
                 .thenReturn(2L);
+
+        when(waitlistEntryService.countActiveOffers(10L))
+                .thenReturn(0L);
 
         Booking savedBooking = new Booking();
         savedBooking.setId(100L);
@@ -170,7 +173,7 @@ class BookingServiceTest {
     @Test
     void createBooking_shouldRejectDuplicateBooking() {
 
-        when(fitnessClassRepository.findById(10L))
+        when(fitnessClassRepository.findByIdForUpdate(10L))
                 .thenReturn(Optional.of(fitnessClass));
 
         when(bookingRepository
@@ -191,7 +194,7 @@ class BookingServiceTest {
 
         fitnessClass.setCapacity(2);
 
-        when(fitnessClassRepository.findById(10L))
+        when(fitnessClassRepository.findByIdForUpdate(10L))
                 .thenReturn(Optional.of(fitnessClass));
 
         when(bookingRepository
@@ -203,6 +206,9 @@ class BookingServiceTest {
                         10L,
                         Booking.Status.CONFIRMED))
                 .thenReturn(2L);
+
+        when(waitlistEntryService.countActiveOffers(10L))
+                .thenReturn(0L);
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -220,7 +226,7 @@ class BookingServiceTest {
                 LocalDateTime.now().minusMinutes(10)
         );
 
-        when(fitnessClassRepository.findById(10L))
+        when(fitnessClassRepository.findByIdForUpdate(10L))
                 .thenReturn(Optional.of(fitnessClass));
 
         assertThrows(
@@ -239,7 +245,7 @@ class BookingServiceTest {
                 FitnessClass.Status.CANCELLED
         );
 
-        when(fitnessClassRepository.findById(10L))
+        when(fitnessClassRepository.findByIdForUpdate(10L))
                 .thenReturn(Optional.of(fitnessClass));
 
         assertThrows(
