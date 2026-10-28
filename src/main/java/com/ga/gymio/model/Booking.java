@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "bookings", uniqueConstraints = { @UniqueConstraint(columnNames = {"customer_id", "fitness_class_id"})})
+@Table(name = "bookings")
 public class Booking {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,6 +30,7 @@ public class Booking {
         CANCELLED,
         COMPLETED
     }
+
     @Enumerated(EnumType.STRING)
     private Status status;
 
