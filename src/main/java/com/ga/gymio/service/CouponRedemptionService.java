@@ -35,10 +35,10 @@ public class CouponRedemptionService {
      * @param paymentId the ID of the payment associated with the redemption
      * @return the saved coupon redemption
      * @throws IllegalArgumentException if the payment or coupon cannot be found
-     * @throws IllegalStateException if the payment is unsuccessful, has no
-     *                                associated customer or coupon, the customer
-     *                                has already redeemed the coupon, or the
-     *                                coupon has reached its usage limit
+     * @throws IllegalStateException    if the payment is unsuccessful, has no
+     *                                  associated customer or coupon, the customer
+     *                                  has already redeemed the coupon, or the
+     *                                  coupon has reached its usage limit
      */
 
     @Transactional
@@ -85,6 +85,12 @@ public class CouponRedemptionService {
                 .orElseThrow(() ->
                         new IllegalArgumentException(
                                 "Coupon not found or is inactive."));
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Coupon redemption interrupted", e);
+        }
 
         if (couponRedemptionRepository
                 .existsByCoupon_IdAndCustomer_Id(couponId, customerId)) {
