@@ -1,6 +1,7 @@
 package com.ga.gymio.repository;
 
 import com.ga.gymio.model.Booking;
+import com.ga.gymio.service.BookingService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,7 +15,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByFitnessClassId(Long fitnessClassId);
 
-    boolean existsByCustomerIdAndFitnessClassId(Long customerId, Long fitnessClassId);
+    boolean existsByCustomerIdAndFitnessClassIdAndStatus(Long customerId, Long fitnessClassId, Booking.Status status);
 
     long countByFitnessClassIdAndStatus( Long fitnessClassId, Booking.Status status );
 

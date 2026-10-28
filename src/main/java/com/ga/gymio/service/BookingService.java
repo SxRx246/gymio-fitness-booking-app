@@ -68,6 +68,13 @@ public class BookingService {
                                 )
                         );
 
+        try {
+            Thread.sleep(6000); // TEMPORARY: simulate processing delay
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Booking interrupted", e);
+        }
+
         if (fitnessClass.getStatus()
                 != FitnessClass.Status.SCHEDULED) {
 
@@ -85,11 +92,11 @@ public class BookingService {
         }
 
         boolean alreadyBooked =
-                bookingRepository
-                        .existsByCustomerIdAndFitnessClassId(
-                                currentUser.getId(),
-                                fitnessClassId
-                        );
+                bookingRepository.existsByCustomerIdAndFitnessClassIdAndStatus(
+                        currentUser.getId(),
+                        fitnessClassId,
+                        Booking.Status.CONFIRMED
+                );
 
         if (alreadyBooked) {
             throw new InformationExistsException(
@@ -122,8 +129,8 @@ public class BookingService {
 
         auditLogService.log(
                 AuditLog.Action.BOOK_CLASS,
-        "User " + currentUser.getId() + " booked Fitness Class " + fitnessClass.getId(),
-                currentUser );
+                "User " + currentUser.getId() + " booked Fitness Class " + fitnessClass.getId(),
+                currentUser);
 
         notificationService.sendNotification(
                 currentUser.getId(),
@@ -230,12 +237,12 @@ public class BookingService {
         if (currentUser.getRole() == User.Role.TRAINER
                 && !fitnessClass.getTrainer().getId().equals(currentUser.getId())) {
             throw new ForbiddenException(
-                    "You can only view bookings for your own fitness classes" );
+                    "You can only view bookings for your own fitness classes");
         }
 
         if (currentUser.getRole() != User.Role.ADMIN
                 && currentUser.getRole() != User.Role.TRAINER) {
-            throw new ForbiddenException( "You are not allowed to view bookings for this fitness class" );
+            throw new ForbiddenException("You are not allowed to view bookings for this fitness class");
         }
 
         return bookingRepository.findByFitnessClassId(fitnessClassId)
@@ -327,8 +334,8 @@ public class BookingService {
 
         auditLogService.log(
                 AuditLog.Action.CANCEL_BOOKING,
-       "User " + currentUser.getId() + " cancelled Booking " +
-                booking.getId(), currentUser
+                "User " + currentUser.getId() + " cancelled Booking " +
+                        booking.getId(), currentUser
         );
 
         notificationService.sendNotification(
@@ -386,7 +393,7 @@ public class BookingService {
 
         auditLogService.log(
                 AuditLog.Action.DELETE_BOOKING,
-       "Admin " + currentUser.getId() + " deleted Booking " + id ,
+                "Admin " + currentUser.getId() + " deleted Booking " + id,
                 currentUser
         );
 

@@ -133,7 +133,7 @@ class BookingServiceTest {
                 .thenReturn(Optional.of(fitnessClass));
 
         when(bookingRepository
-                .existsByCustomerIdAndFitnessClassId(1L, 10L))
+                .existsByCustomerIdAndFitnessClassIdAndStatus(1L, 10L, Booking.Status.CONFIRMED))
                 .thenReturn(false);
 
         when(bookingRepository
@@ -177,7 +177,7 @@ class BookingServiceTest {
                 .thenReturn(Optional.of(fitnessClass));
 
         when(bookingRepository
-                .existsByCustomerIdAndFitnessClassId(1L, 10L))
+                .existsByCustomerIdAndFitnessClassIdAndStatus(1L, 10L,Booking.Status.CONFIRMED))
                 .thenReturn(true);
 
         assertThrows(
@@ -198,7 +198,7 @@ class BookingServiceTest {
                 .thenReturn(Optional.of(fitnessClass));
 
         when(bookingRepository
-                .existsByCustomerIdAndFitnessClassId(1L, 10L))
+                .existsByCustomerIdAndFitnessClassIdAndStatus(1L, 10L,Booking.Status.CONFIRMED))
                 .thenReturn(false);
 
         when(bookingRepository

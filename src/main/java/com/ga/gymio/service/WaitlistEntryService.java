@@ -244,9 +244,10 @@ public class WaitlistEntryService {
         validateFutureScheduledClass(fitnessClass);
 
         boolean alreadyBooked =
-                bookingRepository.existsByCustomerIdAndFitnessClassId(
+                bookingRepository.existsByCustomerIdAndFitnessClassIdAndStatus(
                         customer.getId(),
-                        classId
+                        classId,
+                        Booking.Status.CONFIRMED
                 );
 
         if (alreadyBooked) {
