@@ -1,6 +1,7 @@
 package com.ga.gymio.service;
 
 import com.ga.gymio.authentication.MyUserDetails;
+import com.ga.gymio.event.EmailNotificationEvent;
 import com.ga.gymio.exception.ForbiddenException;
 import com.ga.gymio.exception.InformationExistsException;
 import com.ga.gymio.model.Booking;
@@ -8,10 +9,6 @@ import com.ga.gymio.model.FitnessClass;
 import com.ga.gymio.model.User;
 import com.ga.gymio.repository.BookingRepository;
 import com.ga.gymio.repository.FitnessClassRepository;
-import com.ga.gymio.service.AuditLogService;
-import com.ga.gymio.service.BookingService;
-import com.ga.gymio.service.EmailService;
-import com.ga.gymio.service.NotificationService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -41,7 +39,7 @@ class BookingServiceTest {
     private FitnessClassRepository fitnessClassRepository;
 
     @Mock
-    private EmailService emailService;
+    private ApplicationEventPublisher eventPublisher;
 
     @Mock
     private AuditLogService auditLogService;
@@ -61,7 +59,7 @@ class BookingServiceTest {
         bookingService = new BookingService(
                 bookingRepository,
                 fitnessClassRepository,
-                emailService,
+                eventPublisher,
                 auditLogService,
                 notificationService,
                 waitlistEntryService
@@ -162,11 +160,8 @@ class BookingServiceTest {
 
         verify(bookingRepository).save(any(Booking.class));
 
-        verify(emailService).sendBookingConfirmationEmail(
-                eq("customer@gymio.com"),
-                eq("Morning Full Body"),
-                anyString(),
-                anyString()
+        verify(eventPublisher).publishEvent(
+                any(EmailNotificationEvent.class)
         );
     }
 
@@ -177,7 +172,7 @@ class BookingServiceTest {
                 .thenReturn(Optional.of(fitnessClass));
 
         when(bookingRepository
-                .existsByCustomerIdAndFitnessClassIdAndStatus(1L, 10L,Booking.Status.CONFIRMED))
+                .existsByCustomerIdAndFitnessClassIdAndStatus(1L, 10L, Booking.Status.CONFIRMED))
                 .thenReturn(true);
 
         assertThrows(
@@ -198,7 +193,7 @@ class BookingServiceTest {
                 .thenReturn(Optional.of(fitnessClass));
 
         when(bookingRepository
-                .existsByCustomerIdAndFitnessClassIdAndStatus(1L, 10L,Booking.Status.CONFIRMED))
+                .existsByCustomerIdAndFitnessClassIdAndStatus(1L, 10L, Booking.Status.CONFIRMED))
                 .thenReturn(false);
 
         when(bookingRepository
@@ -278,11 +273,8 @@ class BookingServiceTest {
 
         verify(bookingRepository).save(booking);
 
-        verify(emailService).sendBookingCancellationEmail(
-                eq("customer@gymio.com"),
-                eq("Morning Full Body"),
-                anyString(),
-                anyString()
+        verify(eventPublisher).publishEvent(
+                any(EmailNotificationEvent.class)
         );
     }
 

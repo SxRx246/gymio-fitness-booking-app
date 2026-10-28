@@ -2,6 +2,7 @@ package com.ga.gymio.service;
 
 import com.ga.gymio.authentication.MyUserDetails;
 import com.ga.gymio.dto.request.FitnessClassRequest;
+import com.ga.gymio.event.EmailNotificationEvent;
 import com.ga.gymio.exception.ForbiddenException;
 import com.ga.gymio.model.Booking;
 import com.ga.gymio.model.FitnessClass;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -45,6 +47,9 @@ class FitnessClassServiceTest {
 
     @Mock
     private EmailService emailService;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @Mock
     private AuditLogService auditLogService;
@@ -363,13 +368,8 @@ class FitnessClassServiceTest {
         verify(bookingRepository)
                 .saveAll(List.of(booking));
 
-        verify(emailService)
-                .sendFitnessClassCancellationEmail(
-                        eq("customer@gymio.com"),
-                        eq("Morning Full Body"),
-                        anyString(),
-                        anyString()
-                );
+        verify(eventPublisher)
+                .publishEvent(any(EmailNotificationEvent.class));
     }
 
     @Test

@@ -20,8 +20,6 @@ public class AsyncEmailConfig {
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("email-");
 
-        executor.initialize();
-
         return executor;
     }
 }

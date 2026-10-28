@@ -1,6 +1,7 @@
 package com.ga.gymio.service;
 
 import com.ga.gymio.authentication.MyUserDetails;
+import com.ga.gymio.event.EmailNotificationEvent;
 import com.ga.gymio.exception.ForbiddenException;
 import com.ga.gymio.exception.InformationNotFoundException;
 import com.ga.gymio.model.AuditLog;
@@ -13,6 +14,7 @@ import com.ga.gymio.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -35,7 +37,7 @@ public class FitnessClassService {
     private final FitnessClassRepository fitnessClassRepository;
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
-    private final EmailService emailService;
+    private final ApplicationEventPublisher eventPublisher;
     private final AuditLogService auditLogService;
     private final NotificationService notificationService;
 
@@ -141,7 +143,7 @@ public class FitnessClassService {
      * Retrieves a trainer's fitness classes in paginated form.
      *
      * @param trainerId the trainer's user ID
-     * @param pageable pagination and sorting information
+     * @param pageable  pagination and sorting information
      * @return a page of the trainer's fitness classes
      */
     public Page<FitnessClass> getFitnessClasses(Long trainerId, Pageable pageable) {
@@ -167,9 +169,9 @@ public class FitnessClassService {
     /**
      * Searches fitness classes using optional type, level, and status filters.
      *
-     * @param type the class type filter, or null to include all types
-     * @param level the difficulty level filter, or null to include all levels
-     * @param status the class status filter, or null to include all statuses
+     * @param type     the class type filter, or null to include all types
+     * @param level    the difficulty level filter, or null to include all levels
+     * @param status   the class status filter, or null to include all statuses
      * @param pageable pagination and sorting information
      * @return a page of matching fitness classes
      */
@@ -228,7 +230,7 @@ public class FitnessClassService {
      * Updates a fitness class after checking ownership and its current status.
      *
      * @param request the updated fitness class details
-     * @param id the ID of the fitness class to update
+     * @param id      the ID of the fitness class to update
      * @return the updated fitness class
      */
     public FitnessClass updateFitnessClass(FitnessClassRequest request, Long id) {
@@ -360,11 +362,14 @@ public class FitnessClassService {
                             + " has been cancelled"
             );
 
-            emailService.sendFitnessClassCancellationEmail(
-                    booking.getCustomer().getEmail(),
-                    fitnessClass.getName(),
-                    fitnessClass.getStartTime().toString(),
-                    fitnessClass.getEndTime().toString()
+            eventPublisher.publishEvent(
+                    new EmailNotificationEvent(
+                            EmailNotificationEvent.EmailType.FITNESS_CLASS_CANCELLATION,
+                            booking.getCustomer().getEmail(),
+                            fitnessClass.getName(),
+                            fitnessClass.getStartTime().toString(),
+                            fitnessClass.getEndTime().toString()
+                    )
             );
 
             logger.info("Booking {} cancelled because fitness class {} was cancelled", booking.getId(), fitnessClass.getId());
@@ -472,11 +477,14 @@ public class FitnessClassService {
                     null
             );
 
-            emailService.sendBookingStatusChangeEmail(
-                    booking.getCustomer().getEmail(),
-                    fitnessClass.getName(),
-                    fitnessClass.getStartTime().toString(),
-                    fitnessClass.getEndTime().toString()
+            eventPublisher.publishEvent(
+                    new EmailNotificationEvent(
+                            EmailNotificationEvent.EmailType.BOOKING_STATUS_CHANGE,
+                            booking.getCustomer().getEmail(),
+                            fitnessClass.getName(),
+                            fitnessClass.getStartTime().toString(),
+                            fitnessClass.getEndTime().toString()
+                    )
             );
 
             logger.info("Booking {} has been completed", booking.getId());

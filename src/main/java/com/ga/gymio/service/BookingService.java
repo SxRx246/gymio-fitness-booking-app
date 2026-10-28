@@ -2,6 +2,7 @@ package com.ga.gymio.service;
 
 import com.ga.gymio.authentication.MyUserDetails;
 import com.ga.gymio.dto.response.BookingResponse;
+import com.ga.gymio.event.EmailNotificationEvent;
 import com.ga.gymio.exception.ForbiddenException;
 import com.ga.gymio.exception.InformationExistsException;
 import com.ga.gymio.exception.InformationNotFoundException;
@@ -14,6 +15,7 @@ import com.ga.gymio.repository.FitnessClassRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -34,7 +36,7 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final FitnessClassRepository fitnessClassRepository;
-    private final EmailService emailService;
+    private final ApplicationEventPublisher eventPublisher;
     private final AuditLogService auditLogService;
     private final NotificationService notificationService;
     private final WaitlistEntryService waitlistEntryService;
@@ -139,11 +141,14 @@ public class BookingService {
                         + fitnessClass.getName()
         );
 
-        emailService.sendBookingConfirmationEmail(
-                currentUser.getEmail(),
-                fitnessClass.getName(),
-                fitnessClass.getStartTime().toString(),
-                fitnessClass.getEndTime().toString()
+        eventPublisher.publishEvent(
+                new EmailNotificationEvent(
+                        EmailNotificationEvent.EmailType.BOOKING_CONFIRMATION,
+                        currentUser.getEmail(),
+                        fitnessClass.getName(),
+                        fitnessClass.getStartTime().toString(),
+                        fitnessClass.getEndTime().toString()
+                )
         );
 
         logger.info(
@@ -345,11 +350,14 @@ public class BookingService {
                         + fitnessClass.getName()
         );
 
-        emailService.sendBookingCancellationEmail(
-                booking.getCustomer().getEmail(),
-                fitnessClass.getName(),
-                fitnessClass.getStartTime().toString(),
-                fitnessClass.getEndTime().toString()
+        eventPublisher.publishEvent(
+                new EmailNotificationEvent(
+                        EmailNotificationEvent.EmailType.BOOKING_CANCELLATION,
+                        booking.getCustomer().getEmail(),
+                        fitnessClass.getName(),
+                        fitnessClass.getStartTime().toString(),
+                        fitnessClass.getEndTime().toString()
+                )
         );
 
         logger.info(
