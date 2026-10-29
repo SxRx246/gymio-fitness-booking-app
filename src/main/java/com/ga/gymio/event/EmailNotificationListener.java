@@ -22,6 +22,10 @@ public class EmailNotificationListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleEmailNotification(EmailNotificationEvent event) {
         try {
+            logger.info(
+                    "Processing email notification on thread: {}",
+                    Thread.currentThread().getName()
+            );
             switch (event.type()) {
                 case BOOKING_CONFIRMATION ->
                         emailService.sendBookingConfirmationEmail(
