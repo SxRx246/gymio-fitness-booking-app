@@ -31,13 +31,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-<<<<<<< Updated upstream
-=======
+
 /**
  * Populates the database with sample Gymio data when the application runs
  * with the dev profile and the database does not contain any users.
  */
->>>>>>> Stashed changes
 @Configuration
 @Profile("dev")
 @RequiredArgsConstructor
@@ -617,17 +615,11 @@ public class DatabaseSeeder {
             System.out.println("========================================");
         };
     }
-
-<<<<<<< Updated upstream
-
     /*
      * =========================
      * USER HELPER
      * =========================
      */
-
-=======
->>>>>>> Stashed changes
     private User createUser(
             String email,
             String password,
@@ -680,16 +672,11 @@ public class DatabaseSeeder {
 
         userRepository.save(user);
     }
-
-<<<<<<< Updated upstream
     /*
      * =========================
      * PROFILE HELPER
      * =========================
      */
-
-=======
->>>>>>> Stashed changes
     private UserProfile createProfile(
             User user,
             String firstName,
@@ -709,16 +696,11 @@ public class DatabaseSeeder {
         return userProfileRepository.save(profile);
     }
 
-<<<<<<< Updated upstream
-
     /*
      * =========================
      * FITNESS CLASS HELPER
      * =========================
      */
-
-=======
->>>>>>> Stashed changes
     private FitnessClass createClass(
             String name,
             String description,
@@ -744,16 +726,11 @@ public class DatabaseSeeder {
         return fitnessClassRepository.save(fitnessClass);
     }
 
-<<<<<<< Updated upstream
-
     /*
      * =========================
      * BOOKING HELPER
      * =========================
      */
-
-=======
->>>>>>> Stashed changes
     private Booking createBooking(
             User customer,
             FitnessClass fitnessClass,
@@ -851,16 +828,11 @@ public class DatabaseSeeder {
 
         return waitlistEntryRepository.save(entry);
     }
-
-<<<<<<< Updated upstream
     /*
      * =========================
      * AUDIT LOG HELPER
      * =========================
      */
-
-=======
->>>>>>> Stashed changes
     private void createAuditLog(
             AuditLog.Action action,
             String description,
