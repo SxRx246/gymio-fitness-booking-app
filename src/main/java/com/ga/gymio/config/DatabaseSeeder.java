@@ -2,30 +2,42 @@ package com.ga.gymio.config;
 
 import com.ga.gymio.model.AuditLog;
 import com.ga.gymio.model.Booking;
+import com.ga.gymio.model.Coupon;
+import com.ga.gymio.model.CouponRedemption;
 import com.ga.gymio.model.FitnessClass;
+import com.ga.gymio.model.MembershipPlan;
+import com.ga.gymio.model.Payment;
 import com.ga.gymio.model.User;
 import com.ga.gymio.model.UserProfile;
+import com.ga.gymio.model.WaitlistEntry;
 import com.ga.gymio.repository.AuditLogRepository;
 import com.ga.gymio.repository.BookingRepository;
+import com.ga.gymio.repository.CouponRedemptionRepository;
+import com.ga.gymio.repository.CouponRepository;
 import com.ga.gymio.repository.FitnessClassRepository;
+import com.ga.gymio.repository.MembershipPlanRepository;
+import com.ga.gymio.repository.PaymentRepository;
 import com.ga.gymio.repository.UserProfileRepository;
 import com.ga.gymio.repository.UserRepository;
+import com.ga.gymio.repository.WaitlistEntryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+<<<<<<< Updated upstream
+=======
 /**
- * Seeds the development database with sample users, profiles, fitness classes,
- * bookings, and audit logs for testing and demonstration purposes.
- *
- * This configuration is active only when the {@code dev} profile is enabled.
- * Seed data is inserted only when the user repository is empty.
+ * Populates the database with sample Gymio data when the application runs
+ * with the dev profile and the database does not contain any users.
  */
+>>>>>>> Stashed changes
 @Configuration
 @Profile("dev")
 @RequiredArgsConstructor
@@ -36,30 +48,31 @@ public class DatabaseSeeder {
     private final FitnessClassRepository fitnessClassRepository;
     private final BookingRepository bookingRepository;
     private final AuditLogRepository auditLogRepository;
+
+    private final MembershipPlanRepository membershipPlanRepository;
+    private final PaymentRepository paymentRepository;
+    private final CouponRepository couponRepository;
+    private final CouponRedemptionRepository couponRedemptionRepository;
+    private final WaitlistEntryRepository waitlistEntryRepository;
+
     private final PasswordEncoder passwordEncoder;
 
-    /**
-     * Creates a runner that inserts sample data when the application starts.
-     *
-     * If users already exist in the database, seeding is skipped to avoid
-     * inserting the sample data again.
-     *
-     * @return a command-line runner that initializes development data
-     */
     @Bean
-    public org.springframework.boot.CommandLineRunner seedData() {
-
+    public CommandLineRunner seedData() {
         return args -> {
 
-            // Prevent the seed data from being inserted again
+            // Preserve the existing seed-on-empty behavior.
             if (userRepository.count() > 0) {
+                System.out.println(
+                        "Gymio seed data skipped: users already exist."
+                );
                 return;
             }
 
-            /*
-             * =========================
-             * USERS
-             * =========================
+            LocalDateTime now = LocalDateTime.now();
+
+            /**
+             * Creates a user with an encoded password and saves it to the database.
              */
 
             User admin = createUser(
@@ -98,77 +111,95 @@ public class DatabaseSeeder {
                     User.Role.CUSTOMER
             );
 
-
-            /*
-             * =========================
-             * USER PROFILES
-             * =========================
+            /**
+             * Creates and saves a membership plan with the given name, duration, and price.
              */
 
-            createProfile(
-                    admin,
-                    "Sara",
-                    "Admin",
-                    "39000001",
-                    LocalDate.of(1995, 5, 10)
+            MembershipPlan monthlyPlan = createMembershipPlan(
+                    "Monthly Fitness",
+                    30,
+                    new BigDecimal("25.00")
             );
 
-            createProfile(
-                    trainer1,
-                    "Ahmed",
-                    "Hassan",
-                    "39000002",
-                    LocalDate.of(1990, 3, 15)
+            MembershipPlan quarterlyPlan = createMembershipPlan(
+                    "Quarterly Fitness",
+                    90,
+                    new BigDecimal("65.00")
             );
 
-            createProfile(
-                    trainer2,
-                    "Mariam",
-                    "Ali",
-                    "39000003",
-                    LocalDate.of(1992, 8, 20)
+            MembershipPlan annualPlan = createMembershipPlan(
+                    "Annual Fitness",
+                    365,
+                    new BigDecimal("240.00")
             );
 
-            createProfile(
+            /**
+             * Assigns a membership plan to a user and updates their membership dates and status.
+             */
+
+            assignMembership(
                     customer1,
-                    "John",
-                    "Smith",
-                    "39000004",
-                    LocalDate.of(2000, 1, 12)
+                    monthlyPlan,
+                    LocalDate.now().minusDays(5),
+                    User.MembershipStatus.ACTIVE
             );
 
-            createProfile(
+            assignMembership(
                     customer2,
-                    "Emma",
-                    "Brown",
-                    "39000005",
-                    LocalDate.of(1999, 7, 25)
+                    quarterlyPlan,
+                    LocalDate.now().minusDays(10),
+                    User.MembershipStatus.ACTIVE
             );
 
-            createProfile(
-                    customer3,
-                    "Omar",
-                    "Khalid",
-                    "39000006",
-                    LocalDate.of(2001, 11, 5)
-            );
+            // Customer 3 has no membership yet.
 
-
-            /*
-             * =========================
-             * FITNESS CLASSES
-             * =========================
+            /**
+             * Creates and saves a user profile with the given personal details.
              */
 
-            LocalDateTime now = LocalDateTime.now();
+            createProfile(
+                    admin, "Sara", "Admin",
+                    "39000001", LocalDate.of(1995, 5, 10)
+            );
+
+            createProfile(
+                    trainer1, "Ahmed", "Hassan",
+                    "39000002", LocalDate.of(1990, 3, 15)
+            );
+
+            createProfile(
+                    trainer2, "Mariam", "Ali",
+                    "39000003", LocalDate.of(1992, 8, 20)
+            );
+
+            createProfile(
+                    customer1, "John", "Smith",
+                    "39000004", LocalDate.of(2000, 1, 12)
+            );
+
+            createProfile(
+                    customer2, "Emma", "Brown",
+                    "39000005", LocalDate.of(1999, 7, 25)
+            );
+
+            createProfile(
+                    customer3, "Omar", "Khalid",
+                    "39000006", LocalDate.of(2001, 11, 5)
+            );
+
+            /**
+             * Creates and saves a scheduled fitness class with the given details and trainer.
+             */
 
             FitnessClass class1 = createClass(
                     "Morning Full Body",
                     "A beginner-friendly full body workout.",
                     FitnessClass.Type.FULLBODY,
                     FitnessClass.Level.BEGINNER,
-                    now.plusDays(1).withHour(9).withMinute(0).withSecond(0).withNano(0),
-                    now.plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0),
+                    now.plusDays(1).withHour(9).withMinute(0)
+                            .withSecond(0).withNano(0),
+                    now.plusDays(1).withHour(10).withMinute(0)
+                            .withSecond(0).withNano(0),
                     10,
                     trainer1
             );
@@ -178,8 +209,10 @@ public class DatabaseSeeder {
                     "High intensity interval training session.",
                     FitnessClass.Type.HIIT,
                     FitnessClass.Level.MEDIUM,
-                    now.plusDays(2).withHour(17).withMinute(0).withSecond(0).withNano(0),
-                    now.plusDays(2).withHour(18).withMinute(0).withSecond(0).withNano(0),
+                    now.plusDays(2).withHour(17).withMinute(0)
+                            .withSecond(0).withNano(0),
+                    now.plusDays(2).withHour(18).withMinute(0)
+                            .withSecond(0).withNano(0),
                     8,
                     trainer1
             );
@@ -189,8 +222,10 @@ public class DatabaseSeeder {
                     "Advanced strength and resistance training.",
                     FitnessClass.Type.STRENGTHTRAINING,
                     FitnessClass.Level.ADVANCED,
-                    now.plusDays(3).withHour(18).withMinute(0).withSecond(0).withNano(0),
-                    now.plusDays(3).withHour(19).withMinute(0).withSecond(0).withNano(0),
+                    now.plusDays(3).withHour(18).withMinute(0)
+                            .withSecond(0).withNano(0),
+                    now.plusDays(3).withHour(19).withMinute(0)
+                            .withSecond(0).withNano(0),
                     6,
                     trainer2
             );
@@ -200,8 +235,10 @@ public class DatabaseSeeder {
                     "Fun beginner-friendly Zumba workout.",
                     FitnessClass.Type.ZUMBA,
                     FitnessClass.Level.BEGINNER,
-                    now.plusDays(4).withHour(16).withMinute(0).withSecond(0).withNano(0),
-                    now.plusDays(4).withHour(17).withMinute(0).withSecond(0).withNano(0),
+                    now.plusDays(4).withHour(16).withMinute(0)
+                            .withSecond(0).withNano(0),
+                    now.plusDays(4).withHour(17).withMinute(0)
+                            .withSecond(0).withNano(0),
                     15,
                     trainer2
             );
@@ -211,87 +248,190 @@ public class DatabaseSeeder {
                     "A focused lower body training session.",
                     FitnessClass.Type.LOWERBODY,
                     FitnessClass.Level.MEDIUM,
-                    now.plusDays(5).withHour(10).withMinute(0).withSecond(0).withNano(0),
-                    now.plusDays(5).withHour(11).withMinute(0).withSecond(0).withNano(0),
+                    now.plusDays(5).withHour(10).withMinute(0)
+                            .withSecond(0).withNano(0),
+                    now.plusDays(5).withHour(11).withMinute(0)
+                            .withSecond(0).withNano(0),
                     10,
                     trainer2
             );
 
-
-            /*
-             * =========================
-             * COMPLETED CLASS
-             * =========================
-             *
-             * Useful for demonstrating class statuses.
-             */
-
             FitnessClass completedClass = new FitnessClass();
-
             completedClass.setName("Completed Upper Body");
             completedClass.setDescription(
                     "A completed upper body training session."
             );
             completedClass.setType(FitnessClass.Type.UPPERBODY);
             completedClass.setLevel(FitnessClass.Level.MEDIUM);
-            completedClass.setStartTime(now.minusDays(2).withHour(10).withMinute(0));
-            completedClass.setEndTime(now.minusDays(2).withHour(11).withMinute(0));
+            completedClass.setStartTime(
+                    now.minusDays(2).withHour(10).withMinute(0)
+            );
+            completedClass.setEndTime(
+                    now.minusDays(2).withHour(11).withMinute(0)
+            );
             completedClass.setCapacity(10);
             completedClass.setStatus(FitnessClass.Status.COMPLETED);
             completedClass.setTrainer(trainer1);
-
             completedClass = fitnessClassRepository.save(completedClass);
 
-
-            /*
-             * =========================
-             * BOOKINGS
-             * =========================
+            /**
+             * Creates and saves a booking for a customer in a fitness class.
              */
 
             Booking booking1 = createBooking(
-                    customer1,
-                    class1,
-                    Booking.Status.CONFIRMED
+                    customer1, class1, Booking.Status.CONFIRMED
             );
 
             Booking booking2 = createBooking(
-                    customer2,
-                    class1,
-                    Booking.Status.CONFIRMED
+                    customer2, class1, Booking.Status.CONFIRMED
             );
 
             Booking booking3 = createBooking(
-                    customer3,
-                    class2,
-                    Booking.Status.CONFIRMED
+                    customer3, class2, Booking.Status.CONFIRMED
             );
 
             Booking booking4 = createBooking(
-                    customer1,
-                    class3,
-                    Booking.Status.CONFIRMED
+                    customer1, class3, Booking.Status.CONFIRMED
             );
 
-            // Cancelled booking for demonstration
             Booking booking5 = createBooking(
-                    customer2,
-                    class3,
-                    Booking.Status.CANCELLED
+                    customer2, class3, Booking.Status.CANCELLED
             );
 
-            // Completed booking for demonstration
             Booking booking6 = createBooking(
-                    customer3,
-                    completedClass,
-                    Booking.Status.COMPLETED
+                    customer3, completedClass, Booking.Status.COMPLETED
             );
 
+            /**
+             * Creates and saves a coupon with its discount, usage limit, and validity period.
+             */
+
+            Coupon welcomeCoupon = createCoupon(
+                    "WELCOME10",
+                    "10% discount for a first eligible purchase.",
+                    Coupon.DiscountType.PERCENTAGE,
+                    new BigDecimal("10.00"),
+                    100,
+                    1,
+                    now.minusDays(30),
+                    now.plusDays(90)
+            );
+
+            Coupon fixedCoupon = createCoupon(
+                    "FITNESS5",
+                    "Five-unit discount on an eligible purchase.",
+                    Coupon.DiscountType.FIXED_AMOUNT,
+                    new BigDecimal("5.00"),
+                    50,
+                    0,
+                    now.minusDays(10),
+                    now.plusDays(60)
+            );
+
+            /**
+             * Creates and saves a payment with the given customer, details, and status.
+             */
+
+            Payment bookingPayment1 = createPayment(
+                    customer1,
+                    booking1,
+                    null,
+                    welcomeCoupon,
+                    new BigDecimal("22.500"),
+                    Payment.PaymentType.BOOKING,
+                    Payment.Status.COMPLETED,
+                    "GYMIO-BOOKING-001"
+            );
+
+            Payment bookingPayment2 = createPayment(
+                    customer2,
+                    booking2,
+                    null,
+                    null,
+                    new BigDecimal("25.000"),
+                    Payment.PaymentType.BOOKING,
+                    Payment.Status.COMPLETED,
+                    "GYMIO-BOOKING-002"
+            );
+
+            createPayment(
+                    customer3,
+                    null,
+                    annualPlan,
+                    null,
+                    annualPlan.getPrice(),
+                    Payment.PaymentType.MEMBERSHIP,
+                    Payment.Status.COMPLETED,
+                    "GYMIO-MEMBERSHIP-001"
+            );
+
+            createPayment(
+                    customer3,
+                    null,
+                    monthlyPlan,
+                    null,
+                    monthlyPlan.getPrice(),
+                    Payment.PaymentType.MEMBERSHIP,
+                    Payment.Status.PENDING,
+                    "GYMIO-MEMBERSHIP-002"
+            );
+
+            createPayment(
+                    customer2,
+                    null,
+                    null,
+                    null,
+                    new BigDecimal("15.000"),
+                    Payment.PaymentType.BOOKING,
+                    Payment.Status.FAILED,
+                    "GYMIO-FAILED-001"
+            );
+
+            /**
+             * Creates and saves a record of a customer's coupon redemption.
+             */
+
+            createCouponRedemption(
+                    welcomeCoupon,
+                    customer1,
+                    bookingPayment1
+            );
 
             /*
-             * =========================
-             * AUDIT LOGS
-             * =========================
+             * WAITLIST ENTRIES
+             *
+             * These entries demonstrate the waitlist statuses.
+             * They use class4, for which these customers have no booking.
+             */
+            /**
+             * Creates and saves a waitlist entry for a customer in a fitness class.
+             */
+            createWaitlistEntry(
+                    customer1,
+                    class4,
+                    WaitlistEntry.Status.WAITING,
+                    null,
+                    null
+            );
+
+            createWaitlistEntry(
+                    customer2,
+                    class4,
+                    WaitlistEntry.Status.NOTIFIED,
+                    now.minusMinutes(10),
+                    now.plusHours(2)
+            );
+
+            createWaitlistEntry(
+                    customer3,
+                    class4,
+                    WaitlistEntry.Status.CANCELLED,
+                    null,
+                    null
+            );
+
+            /**
+             * Creates and saves an audit log record for a user's action.
              */
 
             createAuditLog(
@@ -330,7 +470,6 @@ public class DatabaseSeeder {
                     customer3
             );
 
-
             createAuditLog(
                     AuditLog.Action.VERIFY_EMAIL,
                     "User " + admin.getId() + " verified their email",
@@ -348,7 +487,6 @@ public class DatabaseSeeder {
                     "User " + trainer2.getId() + " verified their email",
                     trainer2
             );
-
 
             createAuditLog(
                     AuditLog.Action.CREATE_PROFILE,
@@ -386,7 +524,6 @@ public class DatabaseSeeder {
                     customer3
             );
 
-
             createAuditLog(
                     AuditLog.Action.CREATE_CLASS,
                     "Trainer " + trainer1.getId()
@@ -422,7 +559,6 @@ public class DatabaseSeeder {
                     trainer2
             );
 
-
             createAuditLog(
                     AuditLog.Action.BOOK_CLASS,
                     "User " + customer1.getId()
@@ -451,7 +587,6 @@ public class DatabaseSeeder {
                     customer1
             );
 
-
             createAuditLog(
                     AuditLog.Action.CANCEL_BOOKING,
                     "User " + customer2.getId()
@@ -474,39 +609,38 @@ public class DatabaseSeeder {
 
             System.out.println("========================================");
             System.out.println("Gymio seed data created successfully!");
+            System.out.println("Membership plans: 3");
+            System.out.println("Payments: 5");
+            System.out.println("Coupons: 2");
+            System.out.println("Coupon redemptions: 1");
+            System.out.println("Waitlist entries: 3");
             System.out.println("========================================");
         };
     }
 
+<<<<<<< Updated upstream
 
-    /**
-     * Creates and saves a user with an encoded password and the specified role.
-     *
-     * The seeded account is activated and its email is marked as verified.
-     * Verification and password-reset tokens are cleared.
-     *
-     * @param email the user's email address
-     * @param password the user's raw password, which is encoded before saving
-     * @param role the role assigned to the user
-     * @return the saved user
+    /*
+     * =========================
+     * USER HELPER
+     * =========================
      */
+
+=======
+>>>>>>> Stashed changes
     private User createUser(
             String email,
             String password,
             User.Role role
     ) {
-
         User user = new User();
 
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         user.setRole(role);
         user.setStatus(User.Status.ACTIVE);
-
-        // Seeded users are already verified
         user.setEmailVerified(true);
 
-        // No verification/reset tokens
         user.setVerificationToken(null);
         user.setVerificationTokenExpiresAt(null);
         user.setVerificationEmailSentAt(null);
@@ -516,17 +650,46 @@ public class DatabaseSeeder {
         return userRepository.save(user);
     }
 
+    private MembershipPlan createMembershipPlan(
+            String name,
+            int durationByDays,
+            BigDecimal price
+    ) {
+        MembershipPlan plan = new MembershipPlan();
 
-    /**
-     * Creates and saves a profile associated with a user.
-     *
-     * @param user the user who owns the profile
-     * @param firstName the profile owner's first name
-     * @param lastName the profile owner's last name
-     * @param phoneNumber the profile owner's phone number
-     * @param dateOfBirth the profile owner's date of birth
-     * @return the saved user profile
+        plan.setName(name);
+        plan.setDurationByDays(durationByDays);
+        plan.setPrice(price);
+        plan.setActive(true);
+
+        return membershipPlanRepository.save(plan);
+    }
+
+    private void assignMembership(
+            User user,
+            MembershipPlan plan,
+            LocalDate startDate,
+            User.MembershipStatus status
+    ) {
+        user.setMembershipPlan(plan);
+        user.setMembershipStartDate(startDate);
+        user.setMembershipEndDate(
+                startDate.plusDays(plan.getDurationByDays())
+        );
+        user.setMembershipStatus(status);
+
+        userRepository.save(user);
+    }
+
+<<<<<<< Updated upstream
+    /*
+     * =========================
+     * PROFILE HELPER
+     * =========================
      */
+
+=======
+>>>>>>> Stashed changes
     private UserProfile createProfile(
             User user,
             String firstName,
@@ -534,40 +697,28 @@ public class DatabaseSeeder {
             String phoneNumber,
             LocalDate dateOfBirth
     ) {
-
         UserProfile profile = new UserProfile();
 
         profile.setFirstName(firstName);
         profile.setLastName(lastName);
         profile.setPhoneNumber(phoneNumber);
         profile.setDateOfBirth(dateOfBirth);
-
-        /*
-         * This is the value stored in the profileImage column.
-         * Replace it later with the actual stored image value
-         * if your upload implementation uses another format.
-         */
         profile.setProfileImage("default-profile.png");
-
         profile.setUser(user);
 
         return userProfileRepository.save(profile);
     }
 
+<<<<<<< Updated upstream
 
-    /**
-     * Creates and saves a scheduled fitness class assigned to a trainer.
-     *
-     * @param name the name of the fitness class
-     * @param description a description of the class
-     * @param type the type of workout
-     * @param level the difficulty level
-     * @param startTime the class start date and time
-     * @param endTime the class end date and time
-     * @param capacity the maximum number of participants
-     * @param trainer the trainer assigned to the class
-     * @return the saved fitness class
+    /*
+     * =========================
+     * FITNESS CLASS HELPER
+     * =========================
      */
+
+=======
+>>>>>>> Stashed changes
     private FitnessClass createClass(
             String name,
             String description,
@@ -578,7 +729,6 @@ public class DatabaseSeeder {
             Integer capacity,
             User trainer
     ) {
-
         FitnessClass fitnessClass = new FitnessClass();
 
         fitnessClass.setName(name);
@@ -594,21 +744,21 @@ public class DatabaseSeeder {
         return fitnessClassRepository.save(fitnessClass);
     }
 
+<<<<<<< Updated upstream
 
-    /**
-     * Creates and saves a booking for a customer and a fitness class.
-     *
-     * @param customer the customer making the booking
-     * @param fitnessClass the class being booked
-     * @param status the initial status assigned to the booking
-     * @return the saved booking
+    /*
+     * =========================
+     * BOOKING HELPER
+     * =========================
      */
+
+=======
+>>>>>>> Stashed changes
     private Booking createBooking(
             User customer,
             FitnessClass fitnessClass,
             Booking.Status status
     ) {
-
         Booking booking = new Booking();
 
         booking.setCustomer(customer);
@@ -618,20 +768,104 @@ public class DatabaseSeeder {
         return bookingRepository.save(booking);
     }
 
+    private Coupon createCoupon(
+            String code,
+            String description,
+            Coupon.DiscountType discountType,
+            BigDecimal discountValue,
+            int usageLimit,
+            int usedCount,
+            LocalDateTime startDate,
+            LocalDateTime expiresAt
+    ) {
+        Coupon coupon = new Coupon();
 
-    /**
-     * Creates and saves an audit log entry for a user-related action.
-     *
-     * @param action the type of action being recorded
-     * @param description a description of the recorded event
-     * @param user the user associated with the event
+        coupon.setCode(code);
+        coupon.setDescription(description);
+        coupon.setDiscountType(discountType);
+        coupon.setDiscountValue(discountValue);
+        coupon.setUsageLimit(usageLimit);
+        coupon.setUsedCount(usedCount);
+        coupon.setStartDate(startDate);
+        coupon.setExpiresAt(expiresAt);
+        coupon.setActive(true);
+
+        return couponRepository.save(coupon);
+    }
+
+    private Payment createPayment(
+            User customer,
+            Booking booking,
+            MembershipPlan membershipPlan,
+            Coupon coupon,
+            BigDecimal amount,
+            Payment.PaymentType paymentType,
+            Payment.Status status,
+            String providerPaymentId
+    ) {
+        Payment payment = new Payment();
+
+        payment.setCustomer(customer);
+        payment.setBooking(booking);
+        payment.setMembershipPlan(membershipPlan);
+        payment.setCoupon(coupon);
+        payment.setAmount(amount);
+        payment.setCurrency("BHD");
+        payment.setPaymentType(paymentType);
+        payment.setPaymentMethod(Payment.PaymentMethod.CREDIT_CARD);
+        payment.setStatus(status);
+        payment.setProviderName("Gymio Demo");
+        payment.setProviderPaymentId(providerPaymentId);
+
+        return paymentRepository.save(payment);
+    }
+
+    private CouponRedemption createCouponRedemption(
+            Coupon coupon,
+            User customer,
+            Payment payment
+    ) {
+        CouponRedemption redemption = new CouponRedemption();
+
+        redemption.setCoupon(coupon);
+        redemption.setCustomer(customer);
+        redemption.setPayment(payment);
+
+        return couponRedemptionRepository.save(redemption);
+    }
+
+    private WaitlistEntry createWaitlistEntry(
+            User customer,
+            FitnessClass fitnessClass,
+            WaitlistEntry.Status status,
+            LocalDateTime notifiedAt,
+            LocalDateTime offerExpiresAt
+    ) {
+        WaitlistEntry entry = new WaitlistEntry();
+
+        entry.setCustomer(customer);
+        entry.setFitnessClass(fitnessClass);
+        entry.setStatus(status);
+        entry.setNotifiedAt(notifiedAt);
+        entry.setOfferExpiresAt(offerExpiresAt);
+
+        return waitlistEntryRepository.save(entry);
+    }
+
+<<<<<<< Updated upstream
+    /*
+     * =========================
+     * AUDIT LOG HELPER
+     * =========================
      */
+
+=======
+>>>>>>> Stashed changes
     private void createAuditLog(
             AuditLog.Action action,
             String description,
             User user
     ) {
-
         AuditLog auditLog = new AuditLog();
 
         auditLog.setAction(action);
