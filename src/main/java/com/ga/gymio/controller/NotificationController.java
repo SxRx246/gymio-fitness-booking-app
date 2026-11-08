@@ -1,6 +1,6 @@
 package com.ga.gymio.controller;
 
-import com.ga.gymio.authentication.MyUserDetails;
+import com.ga.user_service.authentication.MyUserDetails;
 import com.ga.gymio.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;

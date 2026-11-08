@@ -1,6 +1,6 @@
 package com.ga.gymio.service;
 
-import com.ga.gymio.authentication.MyUserDetails;
+import com.ga.user_service.authentication.MyUserDetails;
 import com.ga.gymio.dto.request.WaitlistEntryRequest;
 import com.ga.gymio.dto.response.WaitlistEntryResponse;
 import com.ga.gymio.exception.InformationNotFoundException;

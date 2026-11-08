@@ -1,6 +1,6 @@
 package com.ga.gymio.service;
 
-import com.ga.gymio.authentication.MyUserDetails;
+import com.ga.user_service.authentication.MyUserDetails;
 import com.ga.gymio.dto.response.PaymentResponse;
 import com.ga.gymio.model.Coupon;
 import com.ga.gymio.model.MembershipPlan;

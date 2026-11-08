@@ -1,6 +1,6 @@
 package com.ga.gymio.service;
 
-import com.ga.gymio.authentication.MyUserDetails;
+import com.ga.user_service.authentication.MyUserDetails;
 import com.ga.gymio.dto.request.FitnessClassRequest;
 import com.ga.gymio.event.EmailNotificationEvent;
 import com.ga.gymio.exception.ForbiddenException;

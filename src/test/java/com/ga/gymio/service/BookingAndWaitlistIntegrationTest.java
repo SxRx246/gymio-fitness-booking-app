@@ -1,6 +1,6 @@
 package com.ga.gymio.service;
 
-import com.ga.gymio.authentication.MyUserDetails;
+import com.ga.user_service.authentication.MyUserDetails;
 import com.ga.gymio.model.Booking;
 import com.ga.gymio.model.FitnessClass;
 import com.ga.gymio.model.User;
@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.when;
 
 @ActiveProfiles("test")
 @SpringBootTest(
