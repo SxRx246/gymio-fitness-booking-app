@@ -2,7 +2,10 @@ package com.ga.user_service.service;
 
 import com.ga.user_service.authentication.*;
 import com.ga.user_service.dto.request.*;
+import com.ga.user_service.event.PasswordResetEmailRequestedEvent;
+import com.ga.user_service.event.VerificationEmailRequestedEvent;
 import com.ga.user_service.exception.*;
+import com.ga.user_service.messaging.KafkaProducerService;
 import com.ga.user_service.model.AuditLog;
 import com.ga.user_service.model.User;
 import com.ga.user_service.dto.response.LoginResponse;
@@ -36,7 +39,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JWTUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
-    private final EmailService emailService;
+    private final KafkaProducerService kafkaProducerService;
     private final AuditLogService auditLogService;
 
     /**
@@ -83,9 +86,11 @@ public class UserService {
                 savedUser
         );
 
-        emailService.sendVerificationEmail(
-                savedUser.getEmail(),
-                token
+        kafkaProducerService.sendVerificationEmail(
+                new VerificationEmailRequestedEvent(
+                        savedUser.getEmail(),
+                        token
+                )
         );
     }
 
@@ -180,9 +185,11 @@ public class UserService {
 
         userRepository.save(user);
 
-        emailService.sendVerificationEmail(
-                user.getEmail(),
-                newToken
+        kafkaProducerService.sendVerificationEmail(
+                new VerificationEmailRequestedEvent(
+                        user.getEmail(),
+                        newToken
+                )
         );
     }
 
@@ -248,9 +255,11 @@ public class UserService {
 
         userRepository.save(user);
 
-        emailService.sendPasswordResetEmail(
-                user.getEmail(),
-                token
+        kafkaProducerService.sendPasswordResetEmail(
+                new PasswordResetEmailRequestedEvent(
+                        user.getEmail(),
+                        token
+                )
         );
     }
 
