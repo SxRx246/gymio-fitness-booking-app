@@ -20,7 +20,8 @@ public class EmailEventListener {
 
     @KafkaListener(
             topics = KafkaTopicConfig.VERIFICATION_EMAIL_TOPIC,
-            groupId = "notification-service-group"
+            groupId = "notification-service-group",
+            containerFactory = "verificationEmailListenerFactory"
     )
     public void handleVerificationEmail(
             VerificationEmailRequestedEvent event) {
@@ -35,7 +36,8 @@ public class EmailEventListener {
 
     @KafkaListener(
             topics = KafkaTopicConfig.PASSWORD_RESET_EMAIL_TOPIC,
-            groupId = "notification-service-group"
+            groupId = "notification-service-group",
+            containerFactory = "passwordResetEmailListenerFactory"
     )
     public void handlePasswordResetEmail(
             PasswordResetEmailRequestedEvent event) {
