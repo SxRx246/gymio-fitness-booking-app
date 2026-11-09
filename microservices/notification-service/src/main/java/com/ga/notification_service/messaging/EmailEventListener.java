@@ -1,5 +1,6 @@
 package com.ga.notification_service.messaging;
 
+import com.ga.notification_service.config.KafkaTopicConfig;
 import com.ga.notification_service.event.PasswordResetEmailRequestedEvent;
 import com.ga.notification_service.event.VerificationEmailRequestedEvent;
 import com.ga.notification_service.service.EmailService;
@@ -18,7 +19,7 @@ public class EmailEventListener {
     private final EmailService emailService;
 
     @KafkaListener(
-            topics = "verification-email-requested",
+            topics = KafkaTopicConfig.VERIFICATION_EMAIL_TOPIC,
             groupId = "notification-service-group"
     )
     public void handleVerificationEmail(
@@ -33,7 +34,7 @@ public class EmailEventListener {
     }
 
     @KafkaListener(
-            topics = "password-reset-email-requested",
+            topics = KafkaTopicConfig.PASSWORD_RESET_EMAIL_TOPIC,
             groupId = "notification-service-group"
     )
     public void handlePasswordResetEmail(
