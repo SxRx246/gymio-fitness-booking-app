@@ -27,16 +27,19 @@ public class JWTUtils {
 
     /**
      * Generates a JWT token for the specified authenticated user.
-     * The token contains the username, issue time, and expiration time.
+     * The token contains the user's email, user ID, role,
+     * issue time, and expiration time.
      *
      * @param myUserDetails the authenticated user's details
      * @return the generated JWT token
      */
-    public String generateJwtToken(MyUserDetails myUserDetails){
+    public String generateJwtToken(MyUserDetails myUserDetails) {
         return Jwts.builder()
-                .setSubject((myUserDetails.getUsername()))
+                .setSubject(myUserDetails.getUsername())
+                .claim("userId", myUserDetails.getUser().getId())
+                .claim("role", myUserDetails.getUser().getRole().name())
                 .setIssuedAt(new Date())
-                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
+                .setExpiration(new Date(new Date().getTime() + jwtExpirationMs))
                 .signWith(SignatureAlgorithm.HS256, jwtSecret)
                 .compact();
     }
