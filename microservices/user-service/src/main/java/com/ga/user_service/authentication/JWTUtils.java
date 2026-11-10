@@ -1,5 +1,6 @@
 package com.ga.user_service.authentication;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.SecurityException;
@@ -68,5 +69,21 @@ public class JWTUtils {
             logger.log(Level.SEVERE, "Invalid JWT Signature: {0}", e.getMessage());
         }
         return false;
+    }
+
+    /**
+     * Extracts all claims from a JWT token after verifying its signature
+     * and checking its expiration.
+     *
+     * @param token the JWT token to parse
+     * @return the claims contained in the JWT token
+     * @throws io.jsonwebtoken.JwtException if the token is invalid or expired
+     */
+    public Claims getClaimsFromJwtToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(jwtSecret)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 }
