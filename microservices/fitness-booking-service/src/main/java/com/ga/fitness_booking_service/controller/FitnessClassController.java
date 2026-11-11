@@ -1,8 +1,8 @@
-package com.ga.gymio.controller;
+package com.ga.fitness_booking_service.controller;
 
-import com.ga.gymio.dto.request.FitnessClassRequest;
-import com.ga.gymio.model.FitnessClass;
-import com.ga.gymio.service.FitnessClassService;
+import com.ga.fitness_booking_service.dto.request.FitnessClassRequest;
+import com.ga.fitness_booking_service.model.FitnessClass;
+import com.ga.fitness_booking_service.service.FitnessClassService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
@@ -13,8 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 /**
  * Provides REST endpoints for creating, retrieving, searching,
  * updating, cancelling, and deleting fitness classes.
@@ -23,6 +21,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping("/fitness-classes")
 public class FitnessClassController {
+
     private final FitnessClassService fitnessClassService;
 
     /**
@@ -35,7 +34,9 @@ public class FitnessClassController {
     @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public FitnessClass createFitnessClass(@Valid @RequestBody FitnessClassRequest fitnessClassRequest){
+    public FitnessClass createFitnessClass(
+            @Valid @RequestBody FitnessClassRequest fitnessClassRequest) {
+
         return fitnessClassService.createFitnessClass(fitnessClassRequest);
     }
 
@@ -46,9 +47,9 @@ public class FitnessClassController {
      * @return the requested fitness class
      */
     @GetMapping("/{id}")
-    public FitnessClass getFitnessClass(@PathVariable Long id){
-       return fitnessClassService.getFitnessClass(id);
+    public FitnessClass getFitnessClass(@PathVariable Long id) {
 
+        return fitnessClassService.getFitnessClass(id);
     }
 
     /**
@@ -56,14 +57,14 @@ public class FitnessClassController {
      *
      * @param trainerId the ID of the trainer
      * @param pageable pagination and sorting information; defaults to
-     *                 10 classes per page
+     *                  10 classes per page
      * @return a page of the trainer's fitness classes
      */
     @GetMapping("/trainer/{trainerId}")
     public Page<FitnessClass> getFitnessClasses(
             @PathVariable Long trainerId,
-            @PageableDefault(size = 10) Pageable pageable
-    ) {
+            @PageableDefault(size = 10) Pageable pageable) {
+
         return fitnessClassService.getFitnessClasses(trainerId, pageable);
     }
 
@@ -84,8 +85,8 @@ public class FitnessClassController {
             @RequestParam(required = false) FitnessClass.Level level,
             @RequestParam(required = false) FitnessClass.Status status,
             @ParameterObject
-            @PageableDefault(size = 10) Pageable pageable
-    ) {
+            @PageableDefault(size = 10) Pageable pageable) {
+
         return fitnessClassService.searchFitnessClasses(
                 type,
                 level,
@@ -104,8 +105,14 @@ public class FitnessClassController {
      */
     @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
     @PutMapping("/{id}")
-    public FitnessClass updateFitnessClass(@Valid @RequestBody FitnessClassRequest fitnessClassRequest, @PathVariable Long id){
-        return fitnessClassService.updateFitnessClass(fitnessClassRequest, id);
+    public FitnessClass updateFitnessClass(
+            @Valid @RequestBody FitnessClassRequest fitnessClassRequest,
+            @PathVariable Long id) {
+
+        return fitnessClassService.updateFitnessClass(
+                fitnessClassRequest,
+                id
+        );
     }
 
     /**
@@ -117,7 +124,8 @@ public class FitnessClassController {
     @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
     @PutMapping("/{id}/cancel")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void cancelFitnessClass(@PathVariable Long id){
+    public void cancelFitnessClass(@PathVariable Long id) {
+
         fitnessClassService.cancelFitnessClass(id);
     }
 
@@ -131,6 +139,7 @@ public class FitnessClassController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteFitnessClass(@PathVariable Long id) {
+
         fitnessClassService.deleteFitnessClass(id);
     }
 }
