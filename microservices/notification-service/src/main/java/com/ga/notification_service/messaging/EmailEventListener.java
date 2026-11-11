@@ -20,31 +20,35 @@ public class EmailEventListener {
 
     @KafkaListener(
             topics = KafkaTopicConfig.VERIFICATION_EMAIL_TOPIC,
-            groupId = "notification-service-group"
+            groupId = "notification-service-group",
+            containerFactory = "verificationEmailListenerFactory"
     )
-    public void handleVerificationEmail(
-            VerificationEmailRequestedEvent event) {
-
+    public void handleVerificationEmail(VerificationEmailRequestedEvent event) {
         log.info("Received verification email event");
 
-        emailService.sendVerificationEmail(
-                event.email(),
-                event.token()
-        );
+        try {
+            emailService.sendVerificationEmail(event.email(), event.token());
+            log.info("Verification email sent successfully");
+        } catch (Exception e) {
+            log.error("Failed to send verification email", e);
+            throw e;
+        }
     }
 
     @KafkaListener(
             topics = KafkaTopicConfig.PASSWORD_RESET_EMAIL_TOPIC,
-            groupId = "notification-service-group"
+            groupId = "notification-service-group",
+            containerFactory = "passwordResetEmailListenerFactory"
     )
-    public void handlePasswordResetEmail(
-            PasswordResetEmailRequestedEvent event) {
-
+    public void handlePasswordResetEmail(PasswordResetEmailRequestedEvent event) {
         log.info("Received password reset email event");
 
-        emailService.sendPasswordResetEmail(
-                event.email(),
-                event.token()
-        );
+        try {
+            emailService.sendPasswordResetEmail(event.email(), event.token());
+            log.info("Password reset email sent successfully");
+        } catch (Exception e) {
+            log.error("Failed to send password reset email", e);
+            throw e;
+        }
     }
 }
