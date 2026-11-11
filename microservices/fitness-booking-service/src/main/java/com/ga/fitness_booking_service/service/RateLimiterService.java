@@ -1,4 +1,4 @@
-package com.ga.gymio.service;
+package com.ga.fitness_booking_service.service;
 
 import org.springframework.stereotype.Service;
 

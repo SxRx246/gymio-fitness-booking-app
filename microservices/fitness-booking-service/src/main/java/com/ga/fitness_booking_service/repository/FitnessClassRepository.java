@@ -18,10 +18,8 @@ import java.util.Optional;
 public interface FitnessClassRepository
         extends JpaRepository<FitnessClass, Long> {
 
-    // Find classes assigned to a specific trainer
     Page<FitnessClass> findByTrainerId(Long trainerId, Pageable pageable);
 
-    // Filter classes by type, level, and status
     @Query("""
             SELECT f FROM FitnessClass f
             WHERE (:type IS NULL OR f.type = :type)

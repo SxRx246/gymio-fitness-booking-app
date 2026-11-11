@@ -1,6 +1,6 @@
 package com.ga.fitness_booking_service.exception;
 
-import com.ga.gymio.dto.response.ErrorResponse;
+import com.ga.fitness_booking_service.dto.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;

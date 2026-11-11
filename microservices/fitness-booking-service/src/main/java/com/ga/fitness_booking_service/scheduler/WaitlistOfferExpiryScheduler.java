@@ -1,6 +1,6 @@
-package com.ga.gymio.scheduler;
+package com.ga.fitness_booking_service.scheduler;
 
-import com.ga.gymio.service.WaitlistEntryService;
+import com.ga.fitness_booking_service.service.WaitlistEntryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;

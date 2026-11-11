@@ -1,14 +1,10 @@
-package com.ga.gymio.service;
+package com.ga.fitness_booking_service.service;
 
-import com.ga.gymio.model.AuditLog;
-import com.ga.gymio.model.User;
-import com.ga.gymio.repository.AuditLogRepository;
+import com.ga.fitness_booking_service.model.AuditLog;
+import com.ga.fitness_booking_service.repository.AuditLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/**
- * Handles the creation and storage of audit log entries.
- */
 @Service
 @RequiredArgsConstructor
 public class AuditLogService {
@@ -20,18 +16,18 @@ public class AuditLogService {
      *
      * @param action the type of action performed
      * @param description details about the action
-     * @param user the user who performed the action
+     * @param userId the ID of the user who performed the action
      */
     public void log(
             AuditLog.Action action,
             String description,
-            User user
+            Long userId
     ) {
         AuditLog auditLog = new AuditLog();
 
         auditLog.setAction(action);
         auditLog.setDescription(description);
-        auditLog.setUser(user);
+        auditLog.setUserId(userId);
 
         auditLogRepository.save(auditLog);
     }
