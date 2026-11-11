@@ -1,5 +1,7 @@
 package com.ga.notification_service.config;
 
+
+import com.ga.notification_service.event.CustomerNotificationEvent;
 import com.ga.notification_service.event.PasswordResetEmailRequestedEvent;
 import com.ga.notification_service.event.VerificationEmailRequestedEvent;
 
@@ -73,6 +75,44 @@ public class KafkaConsumerConfig {
                 String, PasswordResetEmailRequestedEvent>();
 
         factory.setConsumerFactory(passwordResetEmailConsumerFactory());
+
+        return factory;
+    }
+
+    /**
+     * Creates a consumer factory for customer notification events.
+     *
+     * @return the customer notification consumer factory
+     */
+    @Bean
+    public ConsumerFactory<String, CustomerNotificationEvent>
+    customerNotificationConsumerFactory() {
+
+        JacksonJsonDeserializer<CustomerNotificationEvent> deserializer =
+                new JacksonJsonDeserializer<>(
+                        CustomerNotificationEvent.class
+                ).ignoreTypeHeaders();
+
+        return new DefaultKafkaConsumerFactory<>(
+                kafkaProperties.buildConsumerProperties(),
+                new StringDeserializer(),
+                deserializer
+        );
+    }
+
+    /**
+     * Creates a Kafka listener container factory for customer notifications.
+     *
+     * @return the customer notification listener factory
+     */
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, CustomerNotificationEvent>
+    customerNotificationListenerFactory() {
+
+        var factory = new ConcurrentKafkaListenerContainerFactory<
+                String, CustomerNotificationEvent>();
+
+        factory.setConsumerFactory(customerNotificationConsumerFactory());
 
         return factory;
     }
