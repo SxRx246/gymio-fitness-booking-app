@@ -1,19 +1,19 @@
-package com.ga.gymio.service;
+package com.ga.fitness_booking_service.service;
 
-import com.ga.gymio.authentication.MyUserDetails;
-import com.ga.gymio.dto.request.WaitlistEntryRequest;
-import com.ga.gymio.dto.response.WaitlistEntryResponse;
-import com.ga.gymio.exception.InformationNotFoundException;
-import com.ga.gymio.model.AuditLog;
-import com.ga.gymio.model.Booking;
-import com.ga.gymio.model.FitnessClass;
-import com.ga.gymio.model.User;
-import com.ga.gymio.model.WaitlistEntry;
-import com.ga.gymio.model.WaitlistEntry.Status;
-import com.ga.gymio.repository.BookingRepository;
-import com.ga.gymio.repository.FitnessClassRepository;
-import com.ga.gymio.repository.WaitlistEntryRepository;
+import com.ga.fitness_booking_service.dto.AuthenticatedUser;
+import com.ga.fitness_booking_service.dto.request.WaitlistEntryRequest;
+import com.ga.fitness_booking_service.dto.response.WaitlistEntryResponse;
+import com.ga.fitness_booking_service.event.BookingConfirmedEvent;
+import com.ga.fitness_booking_service.event.WaitlistOfferCreatedEvent;
+import com.ga.fitness_booking_service.event.WaitlistOfferExpiredEvent;
+import com.ga.fitness_booking_service.exception.InformationNotFoundException;
+import com.ga.fitness_booking_service.model.*;
+import com.ga.fitness_booking_service.model.WaitlistEntry.Status;
+import com.ga.fitness_booking_service.repository.BookingRepository;
+import com.ga.fitness_booking_service.repository.FitnessClassRepository;
+import com.ga.fitness_booking_service.repository.WaitlistEntryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -27,7 +27,7 @@ import java.util.Set;
 /**
  * Manages customer waitlist entries for fitness classes.
  * Handles joining and leaving the waitlist, issuing time-limited offers,
- * confirming bookings when offers are accepted, and notifying customers.
+ * confirming bookings when offers are accepted, and publishing notification events.
  */
 @Service
 @RequiredArgsConstructor
@@ -38,8 +38,7 @@ public class WaitlistEntryService {
     private final WaitlistEntryRepository waitlistEntryRepository;
     private final FitnessClassRepository fitnessClassRepository;
     private final BookingRepository bookingRepository;
-    private final NotificationService notificationService;
-    private final EmailService emailService;
+    private final ApplicationEventPublisher eventPublisher;
     private final AuditLogService auditLogService;
 
     /**
@@ -55,10 +54,9 @@ public class WaitlistEntryService {
      *                               already has an active waitlist entry
      */
     @Transactional
-    public WaitlistEntryResponse joinWaitlist(
-            WaitlistEntryRequest request) {
+    public WaitlistEntryResponse joinWaitlist(WaitlistEntryRequest request) {
 
-        User customer = getCurrentCustomer();
+        AuthenticatedUser customer = getCurrentCustomer();
 
         FitnessClass fitnessClass = getLockedClass(
                 request.getFitnessClassId()
@@ -66,11 +64,10 @@ public class WaitlistEntryService {
 
         validateFutureScheduledClass(fitnessClass);
 
-        long confirmed = bookingRepository
-                .countByFitnessClassIdAndStatus(
-                        fitnessClass.getId(),
-                        Booking.Status.CONFIRMED
-                );
+        long confirmed = bookingRepository.countByFitnessClassIdAndStatus(
+                fitnessClass.getId(),
+                Booking.Status.CONFIRMED
+        );
 
         long activeOffers = countActiveOffers(fitnessClass.getId());
 
@@ -88,8 +85,8 @@ public class WaitlistEntryService {
         }
 
         var existing = waitlistEntryRepository
-                .findByCustomer_IdAndFitnessClass_Id(
-                        customer.getId(),
+                .findByCustomerIdAndFitnessClass_Id(
+                        customer.userId(),
                         fitnessClass.getId()
                 );
 
@@ -111,7 +108,7 @@ public class WaitlistEntryService {
         }
 
         WaitlistEntry entry = new WaitlistEntry();
-        entry.setCustomer(customer);
+        entry.setCustomerId(customer.userId());
         entry.setFitnessClass(fitnessClass);
         entry.setStatus(Status.WAITING);
 
@@ -127,12 +124,10 @@ public class WaitlistEntryService {
     @Transactional(readOnly = true)
     public List<WaitlistEntryResponse> getMyWaitlist() {
 
-        User customer = getCurrentCustomer();
+        AuthenticatedUser customer = getCurrentCustomer();
 
         return waitlistEntryRepository
-                .findAllByCustomer_IdOrderByJoinedAtDesc(
-                        customer.getId()
-                )
+                .findAllByCustomerIdOrderByJoinedAtDesc(customer.userId())
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -141,7 +136,7 @@ public class WaitlistEntryService {
     /**
      * Cancels the authenticated customer's waitlist entry.
      * If the customer leaves an active offer, the next waiting customer is
-     * notified that a place may be available.
+     * considered for an available place.
      *
      * @param entryId the ID of the waitlist entry to cancel
      * @throws InformationNotFoundException if the entry cannot be found for
@@ -151,10 +146,10 @@ public class WaitlistEntryService {
     @Transactional
     public void leaveWaitlist(Long entryId) {
 
-        User customer = getCurrentCustomer();
+        AuthenticatedUser customer = getCurrentCustomer();
 
         WaitlistEntry entry = waitlistEntryRepository
-                .findByIdAndCustomer_Id(entryId, customer.getId())
+                .findByIdAndCustomerId(entryId, customer.userId())
                 .orElseThrow(() ->
                         new InformationNotFoundException(
                                 "Waitlist entry not found."
@@ -174,8 +169,6 @@ public class WaitlistEntryService {
         entry.setOfferExpiresAt(null);
         waitlistEntryRepository.save(entry);
 
-        // If the customer declined an active offer by leaving,
-        // the next waiting customer can receive the offer.
         notifyNextWaitingCustomer(classId);
     }
 
@@ -183,7 +176,7 @@ public class WaitlistEntryService {
      * Accepts an active waitlist offer and creates a confirmed booking.
      * Validates the offer's expiration, class availability, and existing bookings.
      * On success, marks the waitlist entry as promoted and records the action
-     * in the audit log before sending booking confirmation notifications.
+     * in the audit log before publishing a booking confirmation event.
      *
      * @param entryId the ID of the waitlist entry whose offer is being accepted
      * @return the updated waitlist entry response
@@ -196,10 +189,10 @@ public class WaitlistEntryService {
     @Transactional
     public WaitlistEntryResponse acceptOffer(Long entryId) {
 
-        User customer = getCurrentCustomer();
+        AuthenticatedUser customer = getCurrentCustomer();
 
         WaitlistEntry entry = waitlistEntryRepository
-                .findByIdAndCustomer_Id(entryId, customer.getId())
+                .findByIdAndCustomerId(entryId, customer.userId())
                 .orElseThrow(() ->
                         new InformationNotFoundException(
                                 "Waitlist entry not found."
@@ -210,9 +203,8 @@ public class WaitlistEntryService {
 
         FitnessClass fitnessClass = getLockedClass(classId);
 
-        // Reload the entry after acquiring the class lock.
-        entry = waitlistEntryRepository
-                .findByIdAndCustomer_Id(entryId, customer.getId())
+      entry = waitlistEntryRepository
+                .findByIdAndCustomerId(entryId, customer.userId())
                 .orElseThrow(() ->
                         new InformationNotFoundException(
                                 "Waitlist entry not found."
@@ -245,7 +237,7 @@ public class WaitlistEntryService {
 
         boolean alreadyBooked =
                 bookingRepository.existsByCustomerIdAndFitnessClassIdAndStatus(
-                        customer.getId(),
+                        customer.userId(),
                         classId,
                         Booking.Status.CONFIRMED
                 );
@@ -262,11 +254,10 @@ public class WaitlistEntryService {
             );
         }
 
-        long confirmed = bookingRepository
-                .countByFitnessClassIdAndStatus(
-                        classId,
-                        Booking.Status.CONFIRMED
-                );
+        long confirmed = bookingRepository.countByFitnessClassIdAndStatus(
+                classId,
+                Booking.Status.CONFIRMED
+        );
 
         if (fitnessClass.getCapacity() == null
                 || confirmed >= fitnessClass.getCapacity()) {
@@ -276,7 +267,7 @@ public class WaitlistEntryService {
         }
 
         Booking booking = new Booking();
-        booking.setCustomer(customer);
+        booking.setCustomerId(customer.userId());
         booking.setFitnessClass(fitnessClass);
         booking.setStatus(Booking.Status.CONFIRMED);
 
@@ -288,25 +279,21 @@ public class WaitlistEntryService {
 
         auditLogService.log(
                 AuditLog.Action.BOOK_CLASS,
-                "User " + customer.getId()
+                "User " + customer.userId()
                         + " accepted a waitlist offer and booked Fitness Class "
                         + classId,
-                customer
+                customer.userId()
         );
 
-        notificationService.sendNotification(
-                customer.getId(),
-                "Your waitlist offer was accepted. Booking #"
-                        + savedBooking.getId()
-                        + " is confirmed for "
-                        + fitnessClass.getName() + "."
-        );
-
-        emailService.sendBookingConfirmationEmail(
-                customer.getEmail(),
-                fitnessClass.getName(),
-                fitnessClass.getStartTime().toString(),
-                fitnessClass.getEndTime().toString()
+        eventPublisher.publishEvent(
+                new BookingConfirmedEvent(
+                        customer.userId(),
+                        customer.email(),
+                        savedBooking.getId(),
+                        fitnessClass.getName(),
+                        fitnessClass.getStartTime().toString(),
+                        fitnessClass.getEndTime().toString()
+                )
         );
 
         return toResponse(entry);
@@ -316,7 +303,7 @@ public class WaitlistEntryService {
      * Declines an active waitlist offer for the authenticated customer.
      *
      * <p>The offer is marked as cancelled, its expiration time is cleared,
-     * and the next eligible waiting customer is notified if a place is available.</p>
+     * and the next eligible waiting customer is considered for the place.</p>
      *
      * @param entryId the ID of the waitlist entry associated with the offer
      * @return the response representing the cancelled waitlist entry
@@ -327,10 +314,10 @@ public class WaitlistEntryService {
     @Transactional
     public WaitlistEntryResponse declineOffer(Long entryId) {
 
-        User customer = getCurrentCustomer();
+        AuthenticatedUser customer = getCurrentCustomer();
 
         WaitlistEntry entry = waitlistEntryRepository
-                .findByIdAndCustomer_Id(entryId, customer.getId())
+                .findByIdAndCustomerId(entryId, customer.userId())
                 .orElseThrow(() ->
                         new InformationNotFoundException(
                                 "Waitlist entry not found."
@@ -342,7 +329,7 @@ public class WaitlistEntryService {
         getLockedClass(classId);
 
         entry = waitlistEntryRepository
-                .findByIdAndCustomer_Id(entryId, customer.getId())
+                .findByIdAndCustomerId(entryId, customer.userId())
                 .orElseThrow(() ->
                         new InformationNotFoundException(
                                 "Waitlist entry not found."
@@ -393,9 +380,8 @@ public class WaitlistEntryService {
      * active offers before selecting the earliest waiting entry.</p>
      *
      * <p>The selected entry is marked as {@code NOTIFIED}, and an offer expiration
-     * time is set using {@link #OFFER_MINUTES}. A notification is sent to the
-     * customer. The reserved place is not offered to another customer until
-     * the current offer is declined or expires.</p>
+     * time is set using {@link #OFFER_MINUTES}. A notification event is published
+     * after the transaction commits.</p>
      *
      * @param fitnessClassId the ID of the fitness class
      */
@@ -417,11 +403,10 @@ public class WaitlistEntryService {
             return;
         }
 
-        long confirmed = bookingRepository
-                .countByFitnessClassIdAndStatus(
-                        fitnessClassId,
-                        Booking.Status.CONFIRMED
-                );
+        long confirmed = bookingRepository.countByFitnessClassIdAndStatus(
+                fitnessClassId,
+                Booking.Status.CONFIRMED
+        );
 
         long activeOffers = countActiveOffers(fitnessClassId);
 
@@ -429,12 +414,11 @@ public class WaitlistEntryService {
             return;
         }
 
-        List<WaitlistEntry> waitingEntries =
-                waitlistEntryRepository
-                        .findAllByFitnessClass_IdAndStatusOrderByJoinedAtAsc(
-                                fitnessClassId,
-                                Status.WAITING
-                        );
+        List<WaitlistEntry> waitingEntries = waitlistEntryRepository
+                .findAllByFitnessClass_IdAndStatusOrderByJoinedAtAsc(
+                        fitnessClassId,
+                        Status.WAITING
+                );
 
         if (waitingEntries.isEmpty()) {
             return;
@@ -449,28 +433,23 @@ public class WaitlistEntryService {
 
         waitlistEntryRepository.save(nextEntry);
 
-        String message = "A place is available in "
-                + fitnessClass.getName()
-                + ". Accept the offer within "
-                + OFFER_MINUTES
-                + " minutes to confirm your booking.";
-
-        notificationService.sendNotification(
-                nextEntry.getCustomer().getId(),
-                message
+        eventPublisher.publishEvent(
+                new WaitlistOfferCreatedEvent(
+                        nextEntry.getCustomerId(),
+                        fitnessClass.getName(),
+                        OFFER_MINUTES
+                )
         );
 
-        // Do not send the next offer unless this offer is declined
-        // or expires. The active offer temporarily reserves the place.
     }
 
     /**
-     * Expires outstanding waitlist offers and notifies the next eligible customers.
+     * Expires outstanding waitlist offers and considers the next eligible
+     * customers for the affected classes.
      *
      * <p>The method finds notified entries whose offer expiration times have passed,
      * locks the associated fitness classes, and rechecks each offer before
-     * cancelling it. Customers are notified when their offers expire. The next
-     * waiting customer is then considered for each affected class.</p>
+     * cancelling it. Expiration notification events are published after commit.</p>
      *
      * <p>This method is intended to be invoked periodically by
      * {@code WaitlistOfferExpiryScheduler}.</p>
@@ -494,22 +473,19 @@ public class WaitlistEntryService {
 
             FitnessClass fitnessClass = getLockedClass(classId);
 
-            // Recheck after acquiring the lock. The customer may
-            // have accepted or declined the offer in the meantime.
             if (entry.getStatus() == Status.NOTIFIED
                     && entry.getOfferExpiresAt() != null
-                    && !entry.getOfferExpiresAt().isAfter(
-                    LocalDateTime.now())) {
+                    && !entry.getOfferExpiresAt().isAfter(LocalDateTime.now())) {
 
                 entry.setStatus(Status.CANCELLED);
                 entry.setOfferExpiresAt(null);
                 waitlistEntryRepository.save(entry);
 
-                notificationService.sendNotification(
-                        entry.getCustomer().getId(),
-                        "Your offer for "
-                                + fitnessClass.getName()
-                                + " has expired."
+                eventPublisher.publishEvent(
+                        new WaitlistOfferExpiredEvent(
+                                entry.getCustomerId(),
+                                fitnessClass.getName()
+                        )
                 );
 
                 affectedClassIds.add(classId);
@@ -559,8 +535,7 @@ public class WaitlistEntryService {
         }
 
         if (fitnessClass.getStartTime() == null
-                || !fitnessClass.getStartTime().isAfter(
-                LocalDateTime.now())) {
+                || !fitnessClass.getStartTime().isAfter(LocalDateTime.now())) {
             throw new IllegalStateException(
                     "This fitness class has already started."
             );
@@ -571,27 +546,24 @@ public class WaitlistEntryService {
      * Retrieves the authenticated user and verifies that the user has the
      * customer role.
      *
-     * @return the authenticated customer
+     * @return the authenticated customer identity
      * @throws IllegalStateException if the user is not authenticated,
      *         the principal is invalid, or the user does not have the customer role
      */
-    private User getCurrentCustomer() {
+    private AuthenticatedUser getCurrentCustomer() {
 
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null
                 || !(authentication.getPrincipal()
-                instanceof MyUserDetails userDetails)) {
+                instanceof AuthenticatedUser customer)) {
             throw new IllegalStateException(
                     "An authenticated customer is required."
             );
         }
 
-        User customer = userDetails.getUser();
-
-        if (customer == null
-                || customer.getRole() != User.Role.CUSTOMER) {
+        if (!"CUSTOMER".equalsIgnoreCase(customer.role())) {
             throw new IllegalStateException(
                     "Only customers can manage their waitlist."
             );
