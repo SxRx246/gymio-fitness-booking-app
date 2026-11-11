@@ -1,5 +1,6 @@
 package com.ga.fitness_booking_service.config;
 
+import com.ga.fitness_booking_service.dto.AuthenticatedUser;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -55,6 +56,7 @@ public class GatewayAuthenticationFilter extends OncePerRequestFilter {
         String secret = request.getHeader("X-Internal-Secret");
         String userId = request.getHeader("X-Authenticated-User-Id");
         String role = request.getHeader("X-Authenticated-User-Role");
+        String email = request.getHeader("X-Authenticated-User-Email");
 
         if (secret != null
                 && MessageDigest.isEqual(
@@ -62,20 +64,38 @@ public class GatewayAuthenticationFilter extends OncePerRequestFilter {
                 internalAuthSecret.getBytes(StandardCharsets.UTF_8))
                 && userId != null
                 && role != null
-                && !role.isBlank()) {
+                && !role.isBlank()
+                && email != null
+                && !email.isBlank()) {
 
             try {
                 Long authenticatedUserId = Long.parseLong(userId);
 
-                String authority = role.startsWith("ROLE_")
-                        ? role
-                        : "ROLE_" + role;
+                if (authenticatedUserId <= 0) {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
+
+                String normalizedRole = role.startsWith("ROLE_")
+                        ? role.substring(5)
+                        : role;
+
+                AuthenticatedUser authenticatedUser =
+                        new AuthenticatedUser(
+                                authenticatedUserId,
+                                normalizedRole,
+                                email
+                        );
 
                 var authentication =
                         new UsernamePasswordAuthenticationToken(
-                                authenticatedUserId,
+                                authenticatedUser,
                                 null,
-                                List.of(new SimpleGrantedAuthority(authority))
+                                List.of(
+                                        new SimpleGrantedAuthority(
+                                                "ROLE_" + normalizedRole
+                                        )
+                                )
                         );
 
                 SecurityContextHolder.getContext()
