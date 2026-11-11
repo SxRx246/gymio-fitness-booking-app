@@ -1,17 +1,17 @@
-package com.ga.gymio.service;
+package com.ga.fitness_booking_service.service;
 
-import com.ga.gymio.authentication.MyUserDetails;
-import com.ga.gymio.dto.response.BookingResponse;
-import com.ga.gymio.event.EmailNotificationEvent;
-import com.ga.gymio.exception.ForbiddenException;
-import com.ga.gymio.exception.InformationExistsException;
-import com.ga.gymio.exception.InformationNotFoundException;
-import com.ga.gymio.model.AuditLog;
-import com.ga.gymio.model.Booking;
-import com.ga.gymio.model.FitnessClass;
-import com.ga.gymio.model.User;
-import com.ga.gymio.repository.BookingRepository;
-import com.ga.gymio.repository.FitnessClassRepository;
+import com.ga.fitness_booking_service.dto.AuthenticatedUser;
+import com.ga.fitness_booking_service.dto.response.BookingResponse;
+import com.ga.fitness_booking_service.event.BookingConfirmedEvent;
+import com.ga.fitness_booking_service.event.CustomerNotificationEvent;
+import com.ga.fitness_booking_service.exception.ForbiddenException;
+import com.ga.fitness_booking_service.exception.InformationExistsException;
+import com.ga.fitness_booking_service.exception.InformationNotFoundException;
+import com.ga.fitness_booking_service.model.AuditLog;
+import com.ga.fitness_booking_service.model.Booking;
+import com.ga.fitness_booking_service.model.FitnessClass;
+import com.ga.fitness_booking_service.repository.BookingRepository;
+import com.ga.fitness_booking_service.repository.FitnessClassRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +38,6 @@ public class BookingService {
     private final FitnessClassRepository fitnessClassRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final AuditLogService auditLogService;
-    private final NotificationService notificationService;
     private final WaitlistEntryService waitlistEntryService;
 
     private static final Logger logger =
@@ -49,16 +48,16 @@ public class BookingService {
      *
      * @param fitnessClassId the ID of the fitness class to book
      * @return the created booking details
+     * @throws InformationNotFoundException if the fitness class does not exist
+     * @throws InformationExistsException if the customer already booked the class
+     * @throws IllegalArgumentException if the class is unavailable or full
      */
     @Transactional
     public BookingResponse createBooking(Long fitnessClassId) {
 
-        logger.info(
-                "Creating booking for fitness class {}",
-                fitnessClassId
-        );
+        logger.info("Creating booking for fitness class {}", fitnessClassId);
 
-        User currentUser = getCurrentUser();
+        AuthenticatedUser currentUser = getCurrentCustomer();
 
         FitnessClass fitnessClass =
                 fitnessClassRepository.findByIdForUpdate(fitnessClassId)
@@ -70,24 +69,14 @@ public class BookingService {
                                 )
                         );
 
-        try {
-            Thread.sleep(6000); // TEMPORARY: simulate processing delay
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Booking interrupted", e);
-        }
-
-        if (fitnessClass.getStatus()
-                != FitnessClass.Status.SCHEDULED) {
-
+        if (fitnessClass.getStatus() != FitnessClass.Status.SCHEDULED) {
             throw new IllegalArgumentException(
                     "This fitness class is not available for booking"
             );
         }
 
-        if (!fitnessClass.getStartTime()
-                .isAfter(LocalDateTime.now())) {
-
+        if (fitnessClass.getStartTime() == null
+                || !fitnessClass.getStartTime().isAfter(LocalDateTime.now())) {
             throw new IllegalArgumentException(
                     "You cannot book a fitness class that has already started"
             );
@@ -95,7 +84,7 @@ public class BookingService {
 
         boolean alreadyBooked =
                 bookingRepository.existsByCustomerIdAndFitnessClassIdAndStatus(
-                        currentUser.getId(),
+                        currentUser.userId(),
                         fitnessClassId,
                         Booking.Status.CONFIRMED
                 );
@@ -115,15 +104,16 @@ public class BookingService {
         long activeOffers =
                 waitlistEntryService.countActiveOffers(fitnessClassId);
 
-        if (confirmedBookings + activeOffers >= fitnessClass.getCapacity()) {
+        if (fitnessClass.getCapacity() == null
+                || fitnessClass.getCapacity() <= 0
+                || confirmedBookings + activeOffers >= fitnessClass.getCapacity()) {
             throw new IllegalArgumentException(
                     "This fitness class is full or its available places are reserved."
             );
         }
 
         Booking booking = new Booking();
-
-        booking.setCustomer(currentUser);
+        booking.setCustomerId(currentUser.userId());
         booking.setFitnessClass(fitnessClass);
         booking.setStatus(Booking.Status.CONFIRMED);
 
@@ -131,20 +121,25 @@ public class BookingService {
 
         auditLogService.log(
                 AuditLog.Action.BOOK_CLASS,
-                "User " + currentUser.getId() + " booked Fitness Class " + fitnessClass.getId(),
-                currentUser);
-
-        notificationService.sendNotification(
-                currentUser.getId(),
-                "Booking #" + savedBooking.getId()
-                        + " confirmed for Fitness Class "
-                        + fitnessClass.getName()
+                "User " + currentUser.userId()
+                        + " booked Fitness Class " + fitnessClassId,
+                currentUser.userId()
         );
 
         eventPublisher.publishEvent(
-                new EmailNotificationEvent(
-                        EmailNotificationEvent.EmailType.BOOKING_CONFIRMATION,
-                        currentUser.getEmail(),
+                new CustomerNotificationEvent(
+                        currentUser.userId(),
+                        "Booking #" + savedBooking.getId()
+                                + " confirmed for Fitness Class "
+                                + fitnessClass.getName()
+                )
+        );
+
+        eventPublisher.publishEvent(
+                new BookingConfirmedEvent(
+                        currentUser.userId(),
+                        currentUser.email(),
+                        savedBooking.getId(),
                         fitnessClass.getName(),
                         fitnessClass.getStartTime().toString(),
                         fitnessClass.getEndTime().toString()
@@ -160,22 +155,23 @@ public class BookingService {
     }
 
     /**
-     * Retrieves the current customer's bookings in paginated form.
+     * Retrieves the authenticated customer's bookings in paginated form.
      *
      * @param pageable pagination and sorting information
      * @return a page of the customer's booking details
      */
+    @Transactional(readOnly = true)
     public Page<BookingResponse> getMyBookings(Pageable pageable) {
 
-        User currentUser = getCurrentUser();
+        AuthenticatedUser currentUser = getCurrentCustomer();
 
         logger.info(
                 "Retrieving bookings for customer {}",
-                currentUser.getId()
+                currentUser.userId()
         );
 
         return bookingRepository.findByCustomerId(
-                currentUser.getId(),
+                currentUser.userId(),
                 pageable
         ).map(BookingResponse::new);
     }
@@ -185,13 +181,13 @@ public class BookingService {
      *
      * @param id the ID of the booking
      * @return the booking details
+     * @throws InformationNotFoundException if the booking does not exist
+     * @throws ForbiddenException if the customer does not own the booking
      */
+    @Transactional(readOnly = true)
     public BookingResponse getBooking(Long id) {
 
-        logger.info(
-                "Retrieving booking with id {}",
-                id
-        );
+        logger.info("Retrieving booking with id {}", id);
 
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() ->
@@ -200,12 +196,10 @@ public class BookingService {
                         )
                 );
 
-        User currentUser = getCurrentUser();
+        AuthenticatedUser currentUser = getCurrentUser();
 
-        if (currentUser.getRole() == User.Role.CUSTOMER
-                && !booking.getCustomer().getId()
-                .equals(currentUser.getId())) {
-
+        if ("CUSTOMER".equalsIgnoreCase(currentUser.role())
+                && !booking.getCustomerId().equals(currentUser.userId())) {
             throw new ForbiddenException(
                     "You are not allowed to view this booking"
             );
@@ -219,7 +213,10 @@ public class BookingService {
      *
      * @param fitnessClassId the ID of the fitness class
      * @return the list of booking details
+     * @throws InformationNotFoundException if the fitness class does not exist
+     * @throws ForbiddenException if the user cannot view the bookings
      */
+    @Transactional(readOnly = true)
     public List<BookingResponse> getBookingsByFitnessClass(Long fitnessClassId) {
 
         logger.info(
@@ -237,17 +234,20 @@ public class BookingService {
                                 )
                         );
 
-        User currentUser = getCurrentUser();
+        AuthenticatedUser currentUser = getCurrentUser();
 
-        if (currentUser.getRole() == User.Role.TRAINER
-                && !fitnessClass.getTrainer().getId().equals(currentUser.getId())) {
+        if ("TRAINER".equalsIgnoreCase(currentUser.role())
+                && !fitnessClass.getTrainerId().equals(currentUser.userId())) {
             throw new ForbiddenException(
-                    "You can only view bookings for your own fitness classes");
+                    "You can only view bookings for your own fitness classes"
+            );
         }
 
-        if (currentUser.getRole() != User.Role.ADMIN
-                && currentUser.getRole() != User.Role.TRAINER) {
-            throw new ForbiddenException("You are not allowed to view bookings for this fitness class");
+        if (!"ADMIN".equalsIgnoreCase(currentUser.role())
+                && !"TRAINER".equalsIgnoreCase(currentUser.role())) {
+            throw new ForbiddenException(
+                    "You are not allowed to view bookings for this fitness class"
+            );
         }
 
         return bookingRepository.findByFitnessClassId(fitnessClassId)
@@ -260,8 +260,18 @@ public class BookingService {
      * Retrieves all bookings for administrative purposes.
      *
      * @return all booking details
+     * @throws ForbiddenException if the current user is not an administrator
      */
+    @Transactional(readOnly = true)
     public List<BookingResponse> getAllBookings() {
+
+        AuthenticatedUser currentUser = getCurrentUser();
+
+        if (!"ADMIN".equalsIgnoreCase(currentUser.role())) {
+            throw new ForbiddenException(
+                    "Only administrators can retrieve all bookings"
+            );
+        }
 
         logger.info("Admin retrieving all bookings");
 
@@ -275,14 +285,14 @@ public class BookingService {
      * Cancels a booking if cancellation is permitted by the booking rules.
      *
      * @param id the ID of the booking to cancel
+     * @throws InformationNotFoundException if the booking does not exist
+     * @throws ForbiddenException if the customer does not own the booking
+     * @throws IllegalArgumentException if the booking cannot be cancelled
      */
     @Transactional
     public void cancelBooking(Long id) {
 
-        logger.info(
-                "Cancelling booking with id {}",
-                id
-        );
+        logger.info("Cancelling booking with id {}", id);
 
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() ->
@@ -291,72 +301,56 @@ public class BookingService {
                         )
                 );
 
-        User currentUser = getCurrentUser();
+        AuthenticatedUser currentUser = getCurrentUser();
 
-        if (currentUser.getRole() == User.Role.CUSTOMER
-                && !booking.getCustomer().getId()
-                .equals(currentUser.getId())) {
-
+        if ("CUSTOMER".equalsIgnoreCase(currentUser.role())
+                && !booking.getCustomerId().equals(currentUser.userId())) {
             throw new ForbiddenException(
                     "You are only allowed to cancel your own bookings"
             );
         }
 
-        if (booking.getStatus()
-                == Booking.Status.CANCELLED) {
-
+        if (booking.getStatus() == Booking.Status.CANCELLED) {
             throw new IllegalArgumentException(
                     "Booking is already cancelled"
             );
         }
 
-        if (booking.getStatus()
-                == Booking.Status.COMPLETED) {
-
+        if (booking.getStatus() == Booking.Status.COMPLETED) {
             throw new IllegalArgumentException(
                     "Completed bookings cannot be cancelled"
             );
         }
 
-        FitnessClass fitnessClass =
-                booking.getFitnessClass();
+        FitnessClass fitnessClass = booking.getFitnessClass();
 
-        if (!fitnessClass.getStartTime()
-                .isAfter(LocalDateTime.now())) {
-
+        if (fitnessClass.getStartTime() == null
+                || !fitnessClass.getStartTime().isAfter(LocalDateTime.now())) {
             throw new IllegalArgumentException(
                     "Bookings cannot be cancelled after the class has started"
             );
         }
 
         booking.setStatus(Booking.Status.CANCELLED);
-
         bookingRepository.save(booking);
 
         waitlistEntryService.notifyNextWaitingCustomer(
-                booking.getFitnessClass().getId()
+                fitnessClass.getId()
         );
 
         auditLogService.log(
                 AuditLog.Action.CANCEL_BOOKING,
-                "User " + currentUser.getId() + " cancelled Booking " +
-                        booking.getId(), currentUser
-        );
-
-        notificationService.sendNotification(
-                booking.getCustomer().getId(),
-                "Booking #" + booking.getId()
-                        + " cancelled for Fitness Class "
-                        + fitnessClass.getName()
+                "User " + currentUser.userId()
+                        + " cancelled Booking " + booking.getId(),
+                currentUser.userId()
         );
 
         eventPublisher.publishEvent(
-                new EmailNotificationEvent(
-                        EmailNotificationEvent.EmailType.BOOKING_CANCELLATION,
-                        booking.getCustomer().getEmail(),
-                        fitnessClass.getName(),
-                        fitnessClass.getStartTime().toString(),
-                        fitnessClass.getEndTime().toString()
+                new CustomerNotificationEvent(
+                        booking.getCustomerId(),
+                        "Booking #" + booking.getId()
+                                + " cancelled for Fitness Class "
+                                + fitnessClass.getName()
                 )
         );
 
@@ -366,29 +360,25 @@ public class BookingService {
         );
     }
 
-    private User getCurrentUser() {
-
-        Authentication authentication =
-                SecurityContextHolder
-                        .getContext()
-                        .getAuthentication();
-
-        MyUserDetails myUserDetails =
-                (MyUserDetails) authentication.getPrincipal();
-
-        return myUserDetails.getUser();
-    }
-
     /**
      * Deletes a booking and records the deletion in the audit log.
      *
      * @param id the ID of the booking to delete
+     * @throws InformationNotFoundException if the booking does not exist
+     * @throws ForbiddenException if the current user is not an administrator
      */
+    @Transactional
     public void deleteBooking(Long id) {
 
-        logger.info("Admin deleting booking with id {}", id);
+        AuthenticatedUser currentUser = getCurrentUser();
 
-        User currentUser = getCurrentUser();
+        if (!"ADMIN".equalsIgnoreCase(currentUser.role())) {
+            throw new ForbiddenException(
+                    "Only administrators can delete bookings"
+            );
+        }
+
+        logger.info("Admin deleting booking with id {}", id);
 
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() ->
@@ -401,13 +391,56 @@ public class BookingService {
 
         auditLogService.log(
                 AuditLog.Action.DELETE_BOOKING,
-                "Admin " + currentUser.getId() + " deleted Booking " + id,
-                currentUser
+                "Admin " + currentUser.userId()
+                        + " deleted Booking " + id,
+                currentUser.userId()
         );
 
         logger.info(
                 "Booking {} deleted successfully by admin",
                 id
         );
+    }
+
+    /**
+     * Retrieves the authenticated user from the security context.
+     *
+     * @return the authenticated user identity
+     * @throws IllegalStateException if the user is not authenticated
+     */
+    private AuthenticatedUser getCurrentUser() {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null
+                || !(authentication.getPrincipal()
+                instanceof AuthenticatedUser currentUser)) {
+            throw new IllegalStateException(
+                    "An authenticated user is required."
+            );
+        }
+
+        return currentUser;
+    }
+
+    /**
+     * Retrieves the authenticated customer from the security context.
+     *
+     * @return the authenticated customer identity
+     * @throws IllegalStateException if the user is not authenticated
+     *         or does not have the customer role
+     */
+    private AuthenticatedUser getCurrentCustomer() {
+
+        AuthenticatedUser currentUser = getCurrentUser();
+
+        if (!"CUSTOMER".equalsIgnoreCase(currentUser.role())) {
+            throw new ForbiddenException(
+                    "Only customers can perform this booking operation."
+            );
+        }
+
+        return currentUser;
     }
 }
