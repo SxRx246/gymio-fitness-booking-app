@@ -1,8 +1,7 @@
-package com.ga.gymio.controller;
+package com.ga.fitness_booking_service.controller;
 
-import com.ga.gymio.dto.response.BookingResponse;
-import com.ga.gymio.model.Booking;
-import com.ga.gymio.service.BookingService;
+import com.ga.fitness_booking_service.dto.response.BookingResponse;
+import com.ga.fitness_booking_service.service.BookingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,8 +42,7 @@ public class BookingController {
     /**
      * Retrieves the authenticated customer's bookings in paginated form.
      *
-     * @param pageable pagination and sorting information; defaults to
-     *                 10 bookings per page
+     * @param pageable pagination and sorting information
      * @return a page of the customer's booking details
      */
     @GetMapping("/my")
@@ -57,7 +55,6 @@ public class BookingController {
 
     /**
      * Retrieves a booking by its ID.
-     * Only customers can access this endpoint.
      *
      * @param id the ID of the booking to retrieve
      * @return the booking details
@@ -82,31 +79,31 @@ public class BookingController {
 
     /**
      * Retrieves bookings associated with a specific fitness class.
-     * Trainers and administrators can access this endpoint.
      *
      * @param fitnessClassId the ID of the fitness class
      * @return a list of bookings for the specified class
      */
     @GetMapping("/fitness-class/{fitnessClassId}")
     @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
-    public List<BookingResponse> getBookingsByFitnessClass(@PathVariable Long fitnessClassId) {
+    public List<BookingResponse> getBookingsByFitnessClass(
+            @PathVariable Long fitnessClassId
+    ) {
         return bookingService.getBookingsByFitnessClass(fitnessClassId);
     }
 
     /**
      * Retrieves all bookings in the system.
-     * Only administrators can access this endpoint.
      *
      * @return a list of all booking details
      */
-    @GetMapping @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public List<BookingResponse> getAllBookings() {
         return bookingService.getAllBookings();
     }
 
     /**
      * Deletes a booking from the system.
-     * Only administrators can access this endpoint.
      *
      * @param id the ID of the booking to delete
      */
@@ -116,5 +113,4 @@ public class BookingController {
     public void deleteBooking(@PathVariable Long id) {
         bookingService.deleteBooking(id);
     }
-
 }
