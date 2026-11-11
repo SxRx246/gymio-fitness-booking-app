@@ -60,6 +60,8 @@ public class SecurityConfiguration {
                                 "/auth/users/forgot-password",
                                 "/auth/users/reset-password",
                                 "/internal/auth/validate",
+                                "/actuator/health",
+                                "/actuator/health/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"

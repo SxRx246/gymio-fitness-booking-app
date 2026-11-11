@@ -1,17 +1,19 @@
 package com.ga.api_gateway.service;
 
 import com.ga.api_gateway.dto.AuthValidationResponse;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 @Service
-@RequiredArgsConstructor
 public class AuthValidationService {
 
     private final WebClient.Builder webClientBuilder;
+
+    public AuthValidationService(WebClient.Builder webClientBuilder) {
+        this.webClientBuilder = webClientBuilder;
+    }
 
     @Value("${app.user-service.validation-url}")
     private String validationUrl;

@@ -2,14 +2,17 @@ package com.ga.api_gateway.filter;
 
 import com.ga.api_gateway.dto.AuthValidationResponse;
 import com.ga.api_gateway.service.AuthValidationService;
-import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ServerWebExchange;
+
 import reactor.core.publisher.Mono;
 
 import java.util.Set;
@@ -25,15 +28,33 @@ import java.util.Set;
  * the request with trusted user identity headers containing the
  * authenticated user's ID, role, and email.</p>
  *
+ * <p>An internal secret is also forwarded to downstream services
+ * to establish trust between the Gateway and those services.</p>
+ *
  * <p>Invalid or missing tokens result in an HTTP 401 response.
  * If the User Service cannot complete validation, an HTTP 503
  * response is returned.</p>
  */
 @Component
-@RequiredArgsConstructor
 public class GatewayAuthFilter implements GlobalFilter, Ordered {
 
     private final AuthValidationService authValidationService;
+
+    /**
+     * Shared internal secret used to authenticate requests
+     * forwarded from the Gateway to downstream services.
+     */
+    @Value("${app.internal-auth.secret}")
+    private String internalAuthSecret;
+
+    /**
+     * Creates the Gateway authentication filter.
+     *
+     * @param authValidationService service responsible for validating JWTs
+     */
+    public GatewayAuthFilter(AuthValidationService authValidationService) {
+        this.authValidationService = authValidationService;
+    }
 
     /**
      * Endpoints that can be accessed without JWT authentication.
@@ -48,12 +69,12 @@ public class GatewayAuthFilter implements GlobalFilter, Ordered {
     );
 
     /**
-     * Filters incoming gateway requests and enforces authentication
+     * Filters incoming Gateway requests and enforces authentication
      * for all endpoints except public authentication endpoints
      * and CORS preflight requests.
      *
      * @param exchange the current server web exchange
-     * @param chain the gateway filter chain
+     * @param chain the Gateway filter chain
      * @return a Mono representing completion of the filtering process
      */
     @Override
@@ -68,7 +89,7 @@ public class GatewayAuthFilter implements GlobalFilter, Ordered {
 
         // Allow public authentication endpoints and CORS preflight requests.
         if (PUBLIC_ENDPOINTS.contains(path)
-                || exchange.getRequest().getMethod().name().equals("OPTIONS")) {
+                || HttpMethod.OPTIONS.equals(exchange.getRequest().getMethod())) {
             return chain.filter(exchange);
         }
 
@@ -97,15 +118,15 @@ public class GatewayAuthFilter implements GlobalFilter, Ordered {
     }
 
     /**
-     * Adds the authenticated user's identity to the request headers
-     * and forwards the request to the appropriate downstream service.
+     * Adds the authenticated user's identity and the internal secret
+     * to the request headers before forwarding it to the downstream service.
      *
-     * <p>Any identity headers supplied by the original client are
-     * removed before trusted values from User Service are added.</p>
+     * <p>Any identity or internal authentication headers supplied by
+     * the original client are removed before trusted values are added.</p>
      *
      * @param exchange the current server web exchange
-     * @param chain the gateway filter chain
-     * @param authResponse the authenticated user's identity
+     * @param chain the Gateway filter chain
+     * @param authResponse the authenticated user's identity returned by User Service
      * @return a Mono representing completion of the forwarded request
      */
     private Mono<Void> forwardAuthenticatedRequest(
@@ -116,11 +137,14 @@ public class GatewayAuthFilter implements GlobalFilter, Ordered {
         ServerHttpRequest request = exchange.getRequest()
                 .mutate()
                 .headers(headers -> {
+
+                    // Remove identity and internal headers supplied by clients.
                     headers.remove("X-Authenticated-User-Id");
                     headers.remove("X-Authenticated-User-Role");
                     headers.remove("X-Authenticated-User-Email");
+                    headers.remove("X-Internal-Secret");
 
-                    // Add identity information returned by User Service.
+                    // Add trusted identity information from User Service.
                     headers.set("X-Authenticated-User-Id",
                             String.valueOf(authResponse.userId()));
 
@@ -129,6 +153,9 @@ public class GatewayAuthFilter implements GlobalFilter, Ordered {
 
                     headers.set("X-Authenticated-User-Email",
                             authResponse.email());
+
+                    // Add the internal secret for downstream authentication.
+                    headers.set("X-Internal-Secret", internalAuthSecret);
                 })
                 .build();
 

@@ -65,6 +65,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/gymio
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
@@ -91,6 +92,7 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8081}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
     depends_on:
       kafka:
         condition: service_healthy
@@ -113,6 +115,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
     depends_on:
       postgres:
         condition: service_healthy
