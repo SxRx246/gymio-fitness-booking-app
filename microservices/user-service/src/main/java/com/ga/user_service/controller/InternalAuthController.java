@@ -1,6 +1,7 @@
 package com.ga.user_service.controller;
 
 import com.ga.user_service.dto.response.AuthValidationResponse;
+import com.ga.user_service.dto.response.TrainerValidationResponse;
 import com.ga.user_service.service.InternalAuthService;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +49,27 @@ public class InternalAuthController {
         } catch (JwtException | IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+    }
+
+    /**
+     * Validates a trainer's account using their email address.
+     *
+     * @param email the trainer's email address
+     * @param internalSecret the shared secret used to authenticate the calling service
+     * @return trainer details if valid, or HTTP 404 if the trainer is not eligible
+     */
+    @GetMapping("/trainers/validate")
+    public ResponseEntity<TrainerValidationResponse> validateTrainer(
+            @RequestParam String email,
+            @RequestHeader(value = "X-Internal-Secret", required = false) String internalSecret) {
+
+        if (!isValidInternalSecret(internalSecret)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        return internalAuthService.validateTrainerByEmail(email)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     /**
