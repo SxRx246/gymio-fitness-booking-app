@@ -3,9 +3,13 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
     <packaging>pom</packaging>
-    <modules>
-        <module>membership-payment-service</module>
-    </modules>
+	<modules>
+		<module>microservices/user-service</module>
+		<module>microservices/notification-service</module>
+		<module>microservices/fitness-booking-service</module>
+		<module>microservices/api-gateway</module>
+		<module>microservices/membership-payment-service</module>
+	</modules>
     <parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
