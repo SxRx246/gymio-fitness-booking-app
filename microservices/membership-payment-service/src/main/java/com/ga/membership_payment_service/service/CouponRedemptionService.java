@@ -1,0 +1,132 @@
+package com.ga.membership_payment_service.service;
+
+import com.ga.membership_payment_service.model.Coupon;
+import com.ga.membership_payment_service.model.CouponRedemption;
+import com.ga.membership_payment_service.model.Payment;
+import com.ga.membership_payment_service.repository.CouponRedemptionRepository;
+import com.ga.membership_payment_service.repository.CouponRepository;
+import com.ga.membership_payment_service.repository.PaymentRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class CouponRedemptionService {
+
+    private final CouponRedemptionRepository couponRedemptionRepository;
+    private final CouponRepository couponRepository;
+    private final PaymentRepository paymentRepository;
+
+    /**
+     * Records a coupon redemption after verifying that the associated payment
+     * has completed successfully.
+     *
+     * @param paymentId the ID of the payment associated with the redemption
+     * @return the saved coupon redemption
+     */
+    @Transactional
+    public CouponRedemption redeemCouponAfterSuccessfulPayment(Long paymentId) {
+
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Payment not found."));
+
+        if (payment.getStatus() != Payment.Status.COMPLETED) {
+            throw new IllegalStateException(
+                    "Coupon redemption requires a successful payment.");
+        }
+
+        var existingRedemption =
+                couponRedemptionRepository.findByPayment_Id(paymentId);
+
+        if (existingRedemption.isPresent()) {
+            return existingRedemption.get();
+        }
+
+        return createCouponRedemption(payment);
+    }
+
+    /**
+     * Creates a coupon redemption and updates the coupon usage count.
+     *
+     * @param payment the completed payment containing the applied coupon
+     * @return the saved coupon redemption
+     */
+    private CouponRedemption createCouponRedemption(Payment payment) {
+
+        Long customerId = payment.getCustomerId();
+
+        if (customerId == null) {
+            throw new IllegalStateException(
+                    "The payment has no associated customer.");
+        }
+
+        Coupon paidCoupon = payment.getCoupon();
+
+        if (paidCoupon == null) {
+            throw new IllegalStateException(
+                    "No coupon was applied to this payment.");
+        }
+
+        Long couponId = paidCoupon.getId();
+
+        // Obtain a pessimistic write lock before checking the usage limit.
+        Coupon coupon = couponRepository.findByIdAndActiveTrue(couponId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Coupon not found or is inactive."));
+
+        LocalDateTime now = LocalDateTime.now();
+
+        if (coupon.getStartDate() == null
+                || now.isBefore(coupon.getStartDate())) {
+            throw new IllegalStateException(
+                    "This coupon is not available yet.");
+        }
+
+        if (coupon.getExpiresAt() == null
+                || !now.isBefore(coupon.getExpiresAt())) {
+            throw new IllegalStateException("This coupon has expired.");
+        }
+
+        if (couponRedemptionRepository
+                .existsByCoupon_IdAndCustomerId(couponId, customerId)) {
+            throw new IllegalStateException(
+                    "This customer has already redeemed this coupon.");
+        }
+
+        if (coupon.getUsedCount() >= coupon.getUsageLimit()) {
+            throw new IllegalStateException(
+                    "The coupon has reached its usage limit.");
+        }
+
+        CouponRedemption redemption = new CouponRedemption();
+        redemption.setCoupon(coupon);
+        redemption.setCustomerId(customerId);
+        redemption.setPayment(payment);
+
+        coupon.setUsedCount(coupon.getUsedCount() + 1);
+
+        couponRepository.save(coupon);
+
+        return couponRedemptionRepository.save(redemption);
+    }
+
+    /**
+     * Retrieves a customer's coupon redemption history, ordered from newest
+     * to oldest.
+     *
+     * @param customerId the ID of the customer whose redemptions are requested
+     * @return a list of the customer's coupon redemptions
+     */
+    @Transactional(readOnly = true)
+    public List<CouponRedemption> getCustomerRedemptions(Long customerId) {
+
+        return couponRedemptionRepository
+                .findAllByCustomerIdOrderByRedeemedAtDesc(customerId);
+    }
+}
