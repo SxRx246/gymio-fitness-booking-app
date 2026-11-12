@@ -1,6 +1,6 @@
-package com.ga.gymio.repository;
+package com.ga.membership_payment_service.repository;
 
-import com.ga.gymio.model.CouponRedemption;
+import com.ga.membership_payment_service.model.CouponRedemption;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

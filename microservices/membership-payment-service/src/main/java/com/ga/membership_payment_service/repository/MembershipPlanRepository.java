@@ -1,6 +1,6 @@
-package com.ga.gymio.repository;
+package com.ga.membership_payment_service.repository;
 
-import com.ga.gymio.model.MembershipPlan;
+import com.ga.membership_payment_service.model.MembershipPlan;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
