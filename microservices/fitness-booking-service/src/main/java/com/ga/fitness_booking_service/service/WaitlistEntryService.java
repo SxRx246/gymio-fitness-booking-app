@@ -186,7 +186,7 @@ public class WaitlistEntryService {
      *                               the customer already has a booking, or
      *                               no place is available
      */
-    @Transactional
+    @Transactional(noRollbackFor = IllegalStateException.class)
     public WaitlistEntryResponse acceptOffer(Long entryId) {
 
         AuthenticatedUser customer = getCurrentCustomer();
