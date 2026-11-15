@@ -5,7 +5,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -25,7 +24,7 @@ import java.util.List;
  * <p>The filter verifies the internal shared secret before accepting
  * the user identity supplied in the request headers.</p>
  *
- * <p>JWT validation is handled centrally by the API Gateway and User Service.
+ * <p>JWT validation is handled centrally by the API Gateway.
  * This filter does not independently validate JWT tokens.</p>
  */
 @Component
@@ -35,8 +34,19 @@ public class GatewayAuthenticationFilter extends OncePerRequestFilter {
     private String internalAuthSecret;
 
     /**
-     * Processes incoming requests and establishes authentication
-     * when valid Gateway identity headers are provided.
+     * Skips authentication for CORS preflight requests and the health endpoint.
+     *
+     * @param request the incoming HTTP request
+     * @return true if the request should bypass this filter
+     */
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return "OPTIONS".equalsIgnoreCase(request.getMethod())
+                || "/actuator/health".equals(request.getServletPath());
+    }
+
+    /**
+     * Verifies the Gateway's internal secret and establishes user authentication.
      *
      * @param request the incoming HTTP request
      * @param response the HTTP response
@@ -54,59 +64,59 @@ public class GatewayAuthenticationFilter extends OncePerRequestFilter {
         SecurityContextHolder.clearContext();
 
         String secret = request.getHeader("X-Internal-Secret");
+
+        if (secret == null
+                || internalAuthSecret == null
+                || !MessageDigest.isEqual(
+                secret.getBytes(StandardCharsets.UTF_8),
+                internalAuthSecret.getBytes(StandardCharsets.UTF_8))) {
+
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+
         String userId = request.getHeader("X-Authenticated-User-Id");
         String role = request.getHeader("X-Authenticated-User-Role");
         String email = request.getHeader("X-Authenticated-User-Email");
 
-        if (secret != null
-                && MessageDigest.isEqual(
-                secret.getBytes(StandardCharsets.UTF_8),
-                internalAuthSecret.getBytes(StandardCharsets.UTF_8))
-                && userId != null
-                && role != null
-                && !role.isBlank()
-                && email != null
-                && !email.isBlank()) {
+        if (userId == null || role == null || role.isBlank()
+                || email == null || email.isBlank()) {
 
-            try {
-                Long authenticatedUserId = Long.parseLong(userId);
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
 
-                if (authenticatedUserId <= 0) {
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-                    return;
-                }
+        try {
+            Long authenticatedUserId = Long.parseLong(userId);
 
-                String normalizedRole = role.startsWith("ROLE_")
-                        ? role.substring(5)
-                        : role;
-
-                AuthenticatedUser authenticatedUser =
-                        new AuthenticatedUser(
-                                authenticatedUserId,
-                                normalizedRole,
-                                email
-                        );
-
-                var authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                authenticatedUser,
-                                null,
-                                List.of(
-                                        new SimpleGrantedAuthority(
-                                                "ROLE_" + normalizedRole
-                                        )
-                                )
-                        );
-
-                SecurityContextHolder.getContext()
-                        .setAuthentication(authentication);
-
-            } catch (NumberFormatException exception) {
+            if (authenticatedUserId <= 0) {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
-        }
 
-        filterChain.doFilter(request, response);
+            String normalizedRole = role.startsWith("ROLE_")
+                    ? role.substring(5)
+                    : role;
+
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser(
+                    authenticatedUserId,
+                    normalizedRole,
+                    email
+            );
+
+            var authentication = new UsernamePasswordAuthenticationToken(
+                    authenticatedUser,
+                    null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + normalizedRole))
+            );
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            filterChain.doFilter(request, response);
+
+        } catch (NumberFormatException exception) {
+            SecurityContextHolder.clearContext();
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        }
     }
 }
