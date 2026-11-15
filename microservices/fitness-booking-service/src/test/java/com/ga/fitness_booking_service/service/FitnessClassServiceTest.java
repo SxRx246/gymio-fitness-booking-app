@@ -1,15 +1,17 @@
-package com.ga.gymio.service;
+package com.ga.fitness_booking_service.service;
 
-import com.ga.gymio.authentication.MyUserDetails;
-import com.ga.gymio.dto.request.FitnessClassRequest;
-import com.ga.gymio.event.EmailNotificationEvent;
-import com.ga.gymio.exception.ForbiddenException;
-import com.ga.gymio.model.Booking;
-import com.ga.gymio.model.FitnessClass;
-import com.ga.gymio.model.User;
-import com.ga.gymio.repository.BookingRepository;
-import com.ga.gymio.repository.FitnessClassRepository;
-import com.ga.gymio.repository.UserRepository;
+import com.ga.fitness_booking_service.client.UserServiceClient;
+import com.ga.fitness_booking_service.dto.AuthenticatedUser;
+import com.ga.fitness_booking_service.dto.request.FitnessClassRequest;
+import com.ga.fitness_booking_service.dto.response.TrainerValidationResponse;
+import com.ga.fitness_booking_service.event.CustomerNotificationEvent;
+import com.ga.fitness_booking_service.exception.ForbiddenException;
+import com.ga.fitness_booking_service.exception.InformationNotFoundException;
+import com.ga.fitness_booking_service.model.AuditLog;
+import com.ga.fitness_booking_service.model.Booking;
+import com.ga.fitness_booking_service.model.FitnessClass;
+import com.ga.fitness_booking_service.repository.BookingRepository;
+import com.ga.fitness_booking_service.repository.FitnessClassRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -33,20 +39,13 @@ import static org.mockito.Mockito.*;
 class FitnessClassServiceTest {
 
     @Mock
-    private NotificationService notificationService;
-
-
-    @Mock
     private FitnessClassRepository fitnessClassRepository;
-
-    @Mock
-    private UserRepository userRepository;
 
     @Mock
     private BookingRepository bookingRepository;
 
     @Mock
-    private EmailService emailService;
+    private UserServiceClient userServiceClient;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -57,34 +56,45 @@ class FitnessClassServiceTest {
     @InjectMocks
     private FitnessClassService fitnessClassService;
 
-    private User trainer;
-    private User anotherTrainer;
-    private User admin;
+    private AuthenticatedUser trainer;
+    private AuthenticatedUser anotherTrainer;
+    private AuthenticatedUser admin;
+
+    private TrainerValidationResponse validTrainer;
+    private TrainerValidationResponse anotherValidTrainer;
+
     private FitnessClass fitnessClass;
 
     @BeforeEach
     void setUp() {
 
-        trainer = new User();
-        trainer.setId(1L);
-        trainer.setEmail("trainer@gymio.com");
-        trainer.setRole(User.Role.TRAINER);
-        trainer.setStatus(User.Status.ACTIVE);
-        trainer.setEmailVerified(true);
+        trainer = new AuthenticatedUser(
+                1L, "TRAINER", "trainer@gymio.com"
+        );
 
-        anotherTrainer = new User();
-        anotherTrainer.setId(2L);
-        anotherTrainer.setEmail("trainer2@gymio.com");
-        anotherTrainer.setRole(User.Role.TRAINER);
-        anotherTrainer.setStatus(User.Status.ACTIVE);
-        anotherTrainer.setEmailVerified(true);
+        anotherTrainer = new AuthenticatedUser(
+                2L, "TRAINER", "trainer2@gymio.com"
+        );
 
-        admin = new User();
-        admin.setId(3L);
-        admin.setEmail("admin@gymio.com");
-        admin.setRole(User.Role.ADMIN);
-        admin.setStatus(User.Status.ACTIVE);
-        admin.setEmailVerified(true);
+        admin = new AuthenticatedUser(
+                3L, "ADMIN", "admin@gymio.com"
+        );
+
+        validTrainer = new TrainerValidationResponse(
+                1L,
+                "trainer@gymio.com",
+                "TRAINER",
+                "ACTIVE",
+                true
+        );
+
+        anotherValidTrainer = new TrainerValidationResponse(
+                2L,
+                "trainer2@gymio.com",
+                "TRAINER",
+                "ACTIVE",
+                true
+        );
 
         fitnessClass = new FitnessClass();
         fitnessClass.setId(10L);
@@ -96,9 +106,9 @@ class FitnessClassServiceTest {
         fitnessClass.setEndTime(LocalDateTime.now().plusDays(1).plusHours(1));
         fitnessClass.setCapacity(10);
         fitnessClass.setStatus(FitnessClass.Status.SCHEDULED);
-        fitnessClass.setTrainer(trainer);
+        fitnessClass.setTrainerId(1L);
 
-        setAuthenticatedUser(trainer);
+        authenticateAs(trainer);
     }
 
     @AfterEach
@@ -106,75 +116,60 @@ class FitnessClassServiceTest {
         SecurityContextHolder.clearContext();
     }
 
-    private void setAuthenticatedUser(User user) {
-
-        MyUserDetails userDetails =
-                new MyUserDetails(user);
+    /**
+     * Sets the authenticated user in the security context.
+     *
+     * @param user the authenticated user
+     */
+    private void authenticateAs(AuthenticatedUser user) {
 
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
-                        userDetails,
+                        user,
                         null,
-                        userDetails.getAuthorities()
+                        List.of()
                 );
 
         SecurityContextHolder.getContext()
                 .setAuthentication(authentication);
     }
 
-    @Test
-    void validateTrainer_shouldAcceptActiveVerifiedTrainer() {
+    /**
+     * Creates a valid fitness class request.
+     *
+     * @return a valid fitness class request
+     */
+    private FitnessClassRequest createValidRequest() {
 
-        assertDoesNotThrow(() ->
-                fitnessClassService.validateTrainer(trainer)
-        );
+        FitnessClassRequest request = new FitnessClassRequest();
+
+        request.setName("Morning Full Body");
+        request.setDescription("Full body workout");
+        request.setType(FitnessClass.Type.FULLBODY);
+        request.setLevel(FitnessClass.Level.BEGINNER);
+        request.setStartTime(LocalDateTime.now().plusDays(1));
+        request.setEndTime(LocalDateTime.now().plusDays(1).plusHours(1));
+        request.setCapacity(10);
+        request.setTrainerEmail("trainer@gymio.com");
+
+        return request;
     }
 
-    @Test
-    void validateTrainer_shouldRejectNonTrainer() {
-
-        trainer.setRole(User.Role.CUSTOMER);
-
-        assertThrows(
-                ForbiddenException.class,
-                () -> fitnessClassService.validateTrainer(trainer)
-        );
-    }
-
-    @Test
-    void validateTrainer_shouldRejectInactiveTrainer() {
-
-        trainer.setStatus(User.Status.INACTIVE);
-
-        assertThrows(
-                ForbiddenException.class,
-                () -> fitnessClassService.validateTrainer(trainer)
-        );
-    }
-
-    @Test
-    void validateTrainer_shouldRejectUnverifiedTrainer() {
-
-        trainer.setEmailVerified(false);
-
-        assertThrows(
-                ForbiddenException.class,
-                () -> fitnessClassService.validateTrainer(trainer)
-        );
-    }
+    // --------------------------------------------------
+    // CREATE FITNESS CLASS
+    // --------------------------------------------------
 
     @Test
     void createFitnessClass_shouldCreateClassSuccessfully() {
 
         FitnessClassRequest request = createValidRequest();
 
-        when(userRepository.findByEmail("trainer@gymio.com"))
-                .thenReturn(Optional.of(trainer));
+        when(userServiceClient.validateTrainerByEmail("trainer@gymio.com"))
+                .thenReturn(Optional.of(validTrainer));
 
         when(fitnessClassRepository.save(any(FitnessClass.class)))
                 .thenAnswer(invocation -> {
-                    FitnessClass saved =
-                            invocation.getArgument(0);
+                    FitnessClass saved = invocation.getArgument(0);
                     saved.setId(20L);
                     return saved;
                 });
@@ -185,19 +180,19 @@ class FitnessClassServiceTest {
         assertNotNull(result);
         assertEquals(20L, result.getId());
         assertEquals("Morning Full Body", result.getName());
-        assertEquals(trainer, result.getTrainer());
-        assertEquals(
-                FitnessClass.Status.SCHEDULED,
-                result.getStatus()
-        );
+        assertEquals(1L, result.getTrainerId());
+        assertEquals(FitnessClass.Status.SCHEDULED, result.getStatus());
+
+        verify(userServiceClient)
+                .validateTrainerByEmail("trainer@gymio.com");
 
         verify(fitnessClassRepository)
                 .save(any(FitnessClass.class));
 
         verify(auditLogService).log(
-                eq(com.ga.gymio.model.AuditLog.Action.CREATE_CLASS),
+                eq(AuditLog.Action.CREATE_CLASS),
                 anyString(),
-                eq(trainer)
+                eq(1L)
         );
     }
 
@@ -207,11 +202,106 @@ class FitnessClassServiceTest {
         FitnessClassRequest request = createValidRequest();
         request.setTrainerEmail("trainer2@gymio.com");
 
-        when(userRepository.findByEmail("trainer2@gymio.com"))
-                .thenReturn(Optional.of(anotherTrainer));
+        when(userServiceClient.validateTrainerByEmail("trainer2@gymio.com"))
+                .thenReturn(Optional.of(anotherValidTrainer));
 
         assertThrows(
                 ForbiddenException.class,
+                () -> fitnessClassService.createFitnessClass(request)
+        );
+
+        verify(fitnessClassRepository, never())
+                .save(any(FitnessClass.class));
+    }
+
+    @Test
+    void createFitnessClass_shouldRejectInvalidTrainerRole() {
+
+        FitnessClassRequest request = createValidRequest();
+
+        TrainerValidationResponse invalidTrainer =
+                new TrainerValidationResponse(
+                        1L,
+                        "trainer@gymio.com",
+                        "CUSTOMER",
+                        "ACTIVE",
+                        true
+                );
+
+        when(userServiceClient.validateTrainerByEmail("trainer@gymio.com"))
+                .thenReturn(Optional.of(invalidTrainer));
+
+        assertThrows(
+                ForbiddenException.class,
+                () -> fitnessClassService.createFitnessClass(request)
+        );
+
+        verify(fitnessClassRepository, never())
+                .save(any(FitnessClass.class));
+    }
+
+    @Test
+    void createFitnessClass_shouldRejectInactiveTrainer() {
+
+        FitnessClassRequest request = createValidRequest();
+
+        TrainerValidationResponse inactiveTrainer =
+                new TrainerValidationResponse(
+                        1L,
+                        "trainer@gymio.com",
+                        "TRAINER",
+                        "INACTIVE",
+                        true
+                );
+
+        when(userServiceClient.validateTrainerByEmail("trainer@gymio.com"))
+                .thenReturn(Optional.of(inactiveTrainer));
+
+        assertThrows(
+                ForbiddenException.class,
+                () -> fitnessClassService.createFitnessClass(request)
+        );
+
+        verify(fitnessClassRepository, never())
+                .save(any(FitnessClass.class));
+    }
+
+    @Test
+    void createFitnessClass_shouldRejectUnverifiedTrainer() {
+
+        FitnessClassRequest request = createValidRequest();
+
+        TrainerValidationResponse unverifiedTrainer =
+                new TrainerValidationResponse(
+                        1L,
+                        "trainer@gymio.com",
+                        "TRAINER",
+                        "ACTIVE",
+                        false
+                );
+
+        when(userServiceClient.validateTrainerByEmail("trainer@gymio.com"))
+                .thenReturn(Optional.of(unverifiedTrainer));
+
+        assertThrows(
+                ForbiddenException.class,
+                () -> fitnessClassService.createFitnessClass(request)
+        );
+
+        verify(fitnessClassRepository, never())
+                .save(any(FitnessClass.class));
+    }
+
+    @Test
+    void createFitnessClass_shouldRejectTrainerNotFound() {
+
+        FitnessClassRequest request = createValidRequest();
+
+        when(userServiceClient.validateTrainerByEmail("trainer@gymio.com"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                InformationNotFoundException.class,
                 () -> fitnessClassService.createFitnessClass(request)
         );
 
@@ -224,16 +314,11 @@ class FitnessClassServiceTest {
 
         FitnessClassRequest request = createValidRequest();
 
-        request.setStartTime(
-                LocalDateTime.now().plusDays(2)
-        );
+        request.setStartTime(LocalDateTime.now().plusDays(2));
+        request.setEndTime(LocalDateTime.now().plusDays(1));
 
-        request.setEndTime(
-                LocalDateTime.now().plusDays(1)
-        );
-
-        when(userRepository.findByEmail("trainer@gymio.com"))
-                .thenReturn(Optional.of(trainer));
+        when(userServiceClient.validateTrainerByEmail("trainer@gymio.com"))
+                .thenReturn(Optional.of(validTrainer));
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -245,9 +330,151 @@ class FitnessClassServiceTest {
     }
 
     @Test
+    void createFitnessClass_shouldRejectCustomerRole() {
+
+        authenticateAs(new AuthenticatedUser(
+                4L, "CUSTOMER", "customer@gymio.com"
+        ));
+
+        FitnessClassRequest request = createValidRequest();
+
+        when(userServiceClient.validateTrainerByEmail("trainer@gymio.com"))
+                .thenReturn(Optional.of(validTrainer));
+
+        assertThrows(
+                ForbiddenException.class,
+                () -> fitnessClassService.createFitnessClass(request)
+        );
+
+        verify(fitnessClassRepository, never())
+                .save(any(FitnessClass.class));
+    }
+
+    // --------------------------------------------------
+    // GET FITNESS CLASS
+    // --------------------------------------------------
+
+    @Test
+    void getFitnessClass_shouldReturnClassSuccessfully() {
+
+        when(fitnessClassRepository.findById(10L))
+                .thenReturn(Optional.of(fitnessClass));
+
+        FitnessClass result =
+                fitnessClassService.getFitnessClass(10L);
+
+        assertNotNull(result);
+        assertEquals(10L, result.getId());
+        assertEquals("Morning Full Body", result.getName());
+    }
+
+    @Test
+    void getFitnessClass_shouldRejectMissingClass() {
+
+        when(fitnessClassRepository.findById(99L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                InformationNotFoundException.class,
+                () -> fitnessClassService.getFitnessClass(99L)
+        );
+    }
+
+    // --------------------------------------------------
+    // GET AND SEARCH FITNESS CLASSES
+    // --------------------------------------------------
+
+    @Test
+    void getFitnessClasses_shouldReturnTrainerClasses() {
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Page<FitnessClass> expectedPage =
+                new PageImpl<>(List.of(fitnessClass));
+
+        when(fitnessClassRepository.findByTrainerId(1L, pageable))
+                .thenReturn(expectedPage);
+
+        Page<FitnessClass> result =
+                fitnessClassService.getFitnessClasses(1L, pageable);
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals(10L, result.getContent().get(0).getId());
+    }
+
+    @Test
+    void searchFitnessClasses_shouldReturnFilteredClasses() {
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Page<FitnessClass> expectedPage =
+                new PageImpl<>(List.of(fitnessClass));
+
+        when(fitnessClassRepository.findByFilters(
+                FitnessClass.Type.FULLBODY,
+                FitnessClass.Level.BEGINNER,
+                FitnessClass.Status.SCHEDULED,
+                pageable
+        )).thenReturn(expectedPage);
+
+        Page<FitnessClass> result =
+                fitnessClassService.searchFitnessClasses(
+                        FitnessClass.Type.FULLBODY,
+                        FitnessClass.Level.BEGINNER,
+                        FitnessClass.Status.SCHEDULED,
+                        pageable
+                );
+
+        assertEquals(1, result.getTotalElements());
+
+        verify(fitnessClassRepository).findByFilters(
+                FitnessClass.Type.FULLBODY,
+                FitnessClass.Level.BEGINNER,
+                FitnessClass.Status.SCHEDULED,
+                pageable
+        );
+    }
+
+    // --------------------------------------------------
+    // UPDATE FITNESS CLASS
+    // --------------------------------------------------
+
+    @Test
+    void updateFitnessClass_shouldUpdateOwnClass() {
+
+        FitnessClassRequest request = createValidRequest();
+        request.setName("Updated Full Body");
+
+        when(fitnessClassRepository.findById(10L))
+                .thenReturn(Optional.of(fitnessClass));
+
+        when(fitnessClassRepository.save(any(FitnessClass.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(bookingRepository.findByFitnessClassIdAndStatus(
+                10L,
+                Booking.Status.CONFIRMED
+        )).thenReturn(List.of());
+
+        FitnessClass result =
+                fitnessClassService.updateFitnessClass(request, 10L);
+
+        assertEquals("Updated Full Body", result.getName());
+
+        verify(fitnessClassRepository)
+                .save(fitnessClass);
+
+        verify(auditLogService).log(
+                eq(AuditLog.Action.UPDATE_CLASS),
+                anyString(),
+                eq(1L)
+        );
+    }
+
+    @Test
     void updateFitnessClass_shouldRejectAnotherTrainer() {
 
-        setAuthenticatedUser(anotherTrainer);
+        authenticateAs(anotherTrainer);
 
         FitnessClassRequest request = createValidRequest();
 
@@ -256,10 +483,7 @@ class FitnessClassServiceTest {
 
         assertThrows(
                 ForbiddenException.class,
-                () -> fitnessClassService.updateFitnessClass(
-                        request,
-                        10L
-                )
+                () -> fitnessClassService.updateFitnessClass(request, 10L)
         );
 
         verify(fitnessClassRepository, never())
@@ -269,9 +493,7 @@ class FitnessClassServiceTest {
     @Test
     void updateFitnessClass_shouldRejectCompletedClass() {
 
-        fitnessClass.setStatus(
-                FitnessClass.Status.COMPLETED
-        );
+        fitnessClass.setStatus(FitnessClass.Status.COMPLETED);
 
         FitnessClassRequest request = createValidRequest();
 
@@ -280,10 +502,7 @@ class FitnessClassServiceTest {
 
         assertThrows(
                 IllegalArgumentException.class,
-                () -> fitnessClassService.updateFitnessClass(
-                        request,
-                        10L
-                )
+                () -> fitnessClassService.updateFitnessClass(request, 10L)
         );
 
         verify(fitnessClassRepository, never())
@@ -291,53 +510,46 @@ class FitnessClassServiceTest {
     }
 
     @Test
-    void updateFitnessClass_shouldUpdateOwnClass() {
+    void updateFitnessClass_shouldAllowAdminToChangeTrainer() {
+
+        authenticateAs(admin);
 
         FitnessClassRequest request = createValidRequest();
-
-        request.setName("Updated Full Body");
+        request.setTrainerEmail("trainer2@gymio.com");
 
         when(fitnessClassRepository.findById(10L))
                 .thenReturn(Optional.of(fitnessClass));
 
+        when(userServiceClient.validateTrainerByEmail("trainer2@gymio.com"))
+                .thenReturn(Optional.of(anotherValidTrainer));
+
         when(fitnessClassRepository.save(any(FitnessClass.class)))
-                .thenAnswer(invocation ->
-                        invocation.getArgument(0));
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(bookingRepository.findByFitnessClassIdAndStatus(
+                10L,
+                Booking.Status.CONFIRMED
+        )).thenReturn(List.of());
 
         FitnessClass result =
-                fitnessClassService.updateFitnessClass(
-                        request,
-                        10L
-                );
+                fitnessClassService.updateFitnessClass(request, 10L);
 
-        assertEquals(
-                "Updated Full Body",
-                result.getName()
-        );
+        assertEquals(2L, result.getTrainerId());
 
-        verify(fitnessClassRepository)
-                .save(fitnessClass);
-
-        verify(auditLogService).log(
-                eq(com.ga.gymio.model.AuditLog.Action.UPDATE_CLASS),
-                anyString(),
-                eq(trainer)
-        );
+        verify(userServiceClient)
+                .validateTrainerByEmail("trainer2@gymio.com");
     }
+
+    // --------------------------------------------------
+    // CANCEL FITNESS CLASS
+    // --------------------------------------------------
 
     @Test
     void cancelFitnessClass_shouldCancelClassAndConfirmedBookings() {
 
-        User customer = new User();
-        customer.setId(4L);
-        customer.setEmail("customer@gymio.com");
-        customer.setRole(User.Role.CUSTOMER);
-        customer.setStatus(User.Status.ACTIVE);
-        customer.setEmailVerified(true);
-
         Booking booking = new Booking();
         booking.setId(100L);
-        booking.setCustomer(customer);
+        booking.setCustomerId(4L);
         booking.setFitnessClass(fitnessClass);
         booking.setStatus(Booking.Status.CONFIRMED);
 
@@ -350,8 +562,7 @@ class FitnessClassServiceTest {
         )).thenReturn(List.of(booking));
 
         when(fitnessClassRepository.save(any(FitnessClass.class)))
-                .thenAnswer(invocation ->
-                        invocation.getArgument(0));
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         fitnessClassService.cancelFitnessClass(10L);
 
@@ -369,15 +580,19 @@ class FitnessClassServiceTest {
                 .saveAll(List.of(booking));
 
         verify(eventPublisher)
-                .publishEvent(any(EmailNotificationEvent.class));
+                .publishEvent(any(CustomerNotificationEvent.class));
+
+        verify(auditLogService).log(
+                eq(AuditLog.Action.CANCEL_CLASS),
+                anyString(),
+                eq(1L)
+        );
     }
 
     @Test
     void cancelFitnessClass_shouldRejectCompletedClass() {
 
-        fitnessClass.setStatus(
-                FitnessClass.Status.COMPLETED
-        );
+        fitnessClass.setStatus(FitnessClass.Status.COMPLETED);
 
         when(fitnessClassRepository.findById(10L))
                 .thenReturn(Optional.of(fitnessClass));
@@ -392,26 +607,41 @@ class FitnessClassServiceTest {
     }
 
     @Test
+    void cancelFitnessClass_shouldRejectAnotherTrainer() {
+
+        authenticateAs(anotherTrainer);
+
+        when(fitnessClassRepository.findById(10L))
+                .thenReturn(Optional.of(fitnessClass));
+
+        assertThrows(
+                ForbiddenException.class,
+                () -> fitnessClassService.cancelFitnessClass(10L)
+        );
+
+        verify(fitnessClassRepository, never())
+                .save(any(FitnessClass.class));
+    }
+
+    // --------------------------------------------------
+    // AUTOMATIC FITNESS CLASS STATUS UPDATES
+    // --------------------------------------------------
+
+    @Test
     void updateFitnessClassStatuses_shouldCompleteFinishedClass() {
 
-        fitnessClass.setStatus(
-                FitnessClass.Status.SCHEDULED
-        );
+        fitnessClass.setStartTime(LocalDateTime.now().minusHours(2));
+        fitnessClass.setEndTime(LocalDateTime.now().minusHours(1));
 
-        fitnessClass.setStartTime(
-                LocalDateTime.now().minusHours(2)
-        );
+        when(fitnessClassRepository.findByStatusAndStartTimeLessThanEqual(
+                eq(FitnessClass.Status.SCHEDULED),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of(fitnessClass));
 
-        fitnessClass.setEndTime(
-                LocalDateTime.now().minusHours(1)
-        );
-
-        when(fitnessClassRepository
-                .findByStatusAndStartTimeLessThanEqual(
-                        eq(FitnessClass.Status.SCHEDULED),
-                        any(LocalDateTime.class)
-                ))
-                .thenReturn(List.of(fitnessClass));
+        when(fitnessClassRepository.findByStatusAndEndTimeLessThanEqual(
+                eq(FitnessClass.Status.IN_PROGRESS),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of());
 
         when(bookingRepository.findByFitnessClassIdAndStatus(
                 10L,
@@ -432,31 +662,18 @@ class FitnessClassServiceTest {
     @Test
     void updateFitnessClassStatuses_shouldMoveStartedClassToInProgress() {
 
-        fitnessClass.setStatus(
-                FitnessClass.Status.SCHEDULED
-        );
+        fitnessClass.setStartTime(LocalDateTime.now().minusMinutes(30));
+        fitnessClass.setEndTime(LocalDateTime.now().plusMinutes(30));
 
-        fitnessClass.setStartTime(
-                LocalDateTime.now().minusMinutes(30)
-        );
+        when(fitnessClassRepository.findByStatusAndStartTimeLessThanEqual(
+                eq(FitnessClass.Status.SCHEDULED),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of(fitnessClass));
 
-        fitnessClass.setEndTime(
-                LocalDateTime.now().plusMinutes(30)
-        );
-
-        when(fitnessClassRepository
-                .findByStatusAndStartTimeLessThanEqual(
-                        eq(FitnessClass.Status.SCHEDULED),
-                        any(LocalDateTime.class)
-                ))
-                .thenReturn(List.of(fitnessClass));
-
-        when(fitnessClassRepository
-                .findByStatusAndEndTimeLessThanEqual(
-                        eq(FitnessClass.Status.IN_PROGRESS),
-                        any(LocalDateTime.class)
-                ))
-                .thenReturn(List.of());
+        when(fitnessClassRepository.findByStatusAndEndTimeLessThanEqual(
+                eq(FitnessClass.Status.IN_PROGRESS),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of());
 
         fitnessClassService.updateFitnessClassStatuses();
 
@@ -464,26 +681,41 @@ class FitnessClassServiceTest {
                 FitnessClass.Status.IN_PROGRESS,
                 fitnessClass.getStatus()
         );
+
+        verify(fitnessClassRepository)
+                .saveAll(List.of(fitnessClass));
     }
 
-    private FitnessClassRequest createValidRequest() {
+    @Test
+    void updateFitnessClassStatuses_shouldCompleteInProgressClass() {
 
-        FitnessClassRequest request =
-                new FitnessClassRequest();
+        fitnessClass.setStatus(FitnessClass.Status.IN_PROGRESS);
+        fitnessClass.setStartTime(LocalDateTime.now().minusHours(2));
+        fitnessClass.setEndTime(LocalDateTime.now().minusHours(1));
 
-        request.setName("Morning Full Body");
-        request.setDescription("Full body workout");
-        request.setType(FitnessClass.Type.FULLBODY);
-        request.setLevel(FitnessClass.Level.BEGINNER);
-        request.setStartTime(
-                LocalDateTime.now().plusDays(1)
+        when(fitnessClassRepository.findByStatusAndStartTimeLessThanEqual(
+                eq(FitnessClass.Status.SCHEDULED),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of());
+
+        when(fitnessClassRepository.findByStatusAndEndTimeLessThanEqual(
+                eq(FitnessClass.Status.IN_PROGRESS),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of(fitnessClass));
+
+        when(bookingRepository.findByFitnessClassIdAndStatus(
+                10L,
+                Booking.Status.CONFIRMED
+        )).thenReturn(List.of());
+
+        fitnessClassService.updateFitnessClassStatuses();
+
+        assertEquals(
+                FitnessClass.Status.COMPLETED,
+                fitnessClass.getStatus()
         );
-        request.setEndTime(
-                LocalDateTime.now().plusDays(1).plusHours(1)
-        );
-        request.setCapacity(10);
-        request.setTrainerEmail("trainer@gymio.com");
 
-        return request;
+        verify(fitnessClassRepository)
+                .saveAll(List.of(fitnessClass));
     }
 }

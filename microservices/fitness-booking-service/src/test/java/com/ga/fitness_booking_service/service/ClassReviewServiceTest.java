@@ -1,209 +1,481 @@
-package com.ga.gymio.service;
+package com.ga.fitness_booking_service.service;
 
-import com.ga.gymio.dto.request.ClassReviewRequest;
-import com.ga.gymio.dto.response.ClassReviewResponse;
-import com.ga.gymio.model.Booking;
-import com.ga.gymio.model.ClassReview;
-import com.ga.gymio.model.FitnessClass;
-import com.ga.gymio.model.User;
-import com.ga.gymio.repository.BookingRepository;
-import com.ga.gymio.repository.ClassReviewRepository;
+import com.ga.fitness_booking_service.dto.AuthenticatedUser;
+import com.ga.fitness_booking_service.dto.request.ClassReviewRequest;
+import com.ga.fitness_booking_service.exception.ForbiddenException;
+import com.ga.fitness_booking_service.exception.InformationNotFoundException;
+import com.ga.fitness_booking_service.model.Booking;
+import com.ga.fitness_booking_service.model.ClassReview;
+import com.ga.fitness_booking_service.repository.BookingRepository;
+import com.ga.fitness_booking_service.repository.ClassReviewRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for ClassReviewService.
+ *
+ * Tests review creation, updating, deletion, retrieval,
+ * ownership validation, and input validation.
+ */
 @ExtendWith(MockitoExtension.class)
 class ClassReviewServiceTest {
 
-    @Mock
-    private ClassReviewRepository classReviewRepository;
+    private static final Long CUSTOMER_ID = 1L;
+    private static final Long OTHER_CUSTOMER_ID = 2L;
+    private static final Long BOOKING_ID = 20L;
+    private static final Long REVIEW_ID = 30L;
+    private static final Long FITNESS_CLASS_ID = 10L;
 
     @Mock
     private BookingRepository bookingRepository;
+
+    @Mock
+    private ClassReviewRepository classReviewRepository;
 
     @InjectMocks
     private ClassReviewService classReviewService;
 
     private Booking booking;
-    private User customer;
-    private FitnessClass fitnessClass;
+    private ClassReview review;
 
+    /**
+     * Creates a completed booking and a review for test scenarios.
+     */
     @BeforeEach
     void setUp() {
-        customer = new User();
-        customer.setEmail("customer@example.com");
-
-        fitnessClass = new FitnessClass();
-        fitnessClass.setId(10L);
+        authenticateAs(CUSTOMER_ID, "CUSTOMER");
 
         booking = new Booking();
-        booking.setId(20L);
-        booking.setCustomer(customer);
-        booking.setFitnessClass(fitnessClass);
+        booking.setId(BOOKING_ID);
+        booking.setCustomerId(CUSTOMER_ID);
         booking.setStatus(Booking.Status.COMPLETED);
+
+        review = new ClassReview();
+        review.setId(REVIEW_ID);
+        review.setBooking(booking);
+        review.setRating(5);
+        review.setComment("Excellent class!");
     }
 
-    @Test
-    void createReview_whenBookingIsCompleted_savesReview() {
-        ClassReviewRequest request = new ClassReviewRequest();
-        request.setBookingId(20L);
-        request.setRating(5);
-        request.setComment("Excellent class!");
+    /**
+     * Clears the security context after each test.
+     */
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
 
-        when(bookingRepository.findById(20L))
+    /**
+     * Authenticates a user for the current test.
+     *
+     * @param userId the authenticated user's ID
+     * @param role the authenticated user's role
+     */
+    private void authenticateAs(Long userId, String role) {
+        AuthenticatedUser user =
+                new AuthenticatedUser(userId, role, "customer@example.com");
+
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(user, null, List.of());
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+
+    /**
+     * Creates a valid review request.
+     *
+     * @param bookingId the booking ID
+     * @param rating the review rating
+     * @param comment the review comment
+     * @return a valid review request
+     */
+    private ClassReviewRequest createRequest(
+            Long bookingId,
+            Integer rating,
+            String comment
+    ) {
+        ClassReviewRequest request = new ClassReviewRequest();
+        request.setBookingId(bookingId);
+        request.setRating(rating);
+        request.setComment(comment);
+        return request;
+    }
+
+    // CREATE REVIEW TESTS
+
+    @Test
+    void createReviewShouldSaveReviewForCompletedBooking() {
+        when(bookingRepository.findById(BOOKING_ID))
                 .thenReturn(Optional.of(booking));
-        when(classReviewRepository.existsByBooking_Id(20L))
+        when(classReviewRepository.existsByBooking_Id(BOOKING_ID))
                 .thenReturn(false);
         when(classReviewRepository.save(any(ClassReview.class)))
-                .thenAnswer(invocation -> {
-                    ClassReview review = invocation.getArgument(0);
-                    review.setId(30L);
-                    return review;
-                });
+                .thenReturn(review);
 
-        ClassReviewResponse response = classReviewService.createReview(
-                request, "customer@example.com");
+        var response = classReviewService.createReview(
+                createRequest(BOOKING_ID, 5, "Excellent class!")
+        );
 
-        assertEquals(30L, response.getId());
-        assertEquals(20L, response.getBookingId());
-        assertEquals(5, response.getRating());
-        assertEquals("Excellent class!", response.getComment());
+        assertNotNull(response);
 
-        verify(classReviewRepository).save(any(ClassReview.class));
+        ArgumentCaptor<ClassReview> captor =
+                ArgumentCaptor.forClass(ClassReview.class);
+
+        verify(classReviewRepository).save(captor.capture());
+
+        assertEquals(booking, captor.getValue().getBooking());
+        assertEquals(5, captor.getValue().getRating());
+        assertEquals("Excellent class!", captor.getValue().getComment());
     }
 
     @Test
-    void createReview_whenBookingDoesNotExist_throwsNotFound() {
-        ClassReviewRequest request = new ClassReviewRequest();
-        request.setBookingId(20L);
-        request.setRating(5);
-
-        when(bookingRepository.findById(20L))
+    void createReviewShouldThrowWhenBookingDoesNotExist() {
+        when(bookingRepository.findById(BOOKING_ID))
                 .thenReturn(Optional.empty());
 
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
+        assertThrows(
+                InformationNotFoundException.class,
                 () -> classReviewService.createReview(
-                        request, "customer@example.com"));
+                        createRequest(BOOKING_ID, 5, "Good class")
+                )
+        );
 
-        assertEquals(404, exception.getStatusCode().value());
         verify(classReviewRepository, never()).save(any());
     }
 
     @Test
-    void createReview_whenCustomerDoesNotOwnBooking_throwsForbidden() {
-        ClassReviewRequest request = new ClassReviewRequest();
-        request.setBookingId(20L);
-        request.setRating(5);
+    void createReviewShouldRejectAnotherCustomersBooking() {
+        booking.setCustomerId(OTHER_CUSTOMER_ID);
 
-        when(bookingRepository.findById(20L))
+        when(bookingRepository.findById(BOOKING_ID))
                 .thenReturn(Optional.of(booking));
 
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
+        assertThrows(
+                ForbiddenException.class,
                 () -> classReviewService.createReview(
-                        request, "other@example.com"));
+                        createRequest(BOOKING_ID, 5, "Good class")
+                )
+        );
 
-        assertEquals(403, exception.getStatusCode().value());
         verify(classReviewRepository, never()).save(any());
     }
 
     @Test
-    void createReview_whenBookingIsNotCompleted_throwsBadRequest() {
+    void createReviewShouldRejectBookingThatIsNotCompleted() {
         booking.setStatus(Booking.Status.CONFIRMED);
 
-        ClassReviewRequest request = new ClassReviewRequest();
-        request.setBookingId(20L);
-        request.setRating(5);
-
-        when(bookingRepository.findById(20L))
+        when(bookingRepository.findById(BOOKING_ID))
                 .thenReturn(Optional.of(booking));
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
                 () -> classReviewService.createReview(
-                        request, "customer@example.com"));
+                        createRequest(BOOKING_ID, 5, "Good class")
+                )
+        );
 
-        assertEquals(400, exception.getStatusCode().value());
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
         verify(classReviewRepository, never()).save(any());
     }
 
     @Test
-    void createReview_whenReviewAlreadyExists_throwsConflict() {
-        ClassReviewRequest request = new ClassReviewRequest();
-        request.setBookingId(20L);
-        request.setRating(4);
-
-        when(bookingRepository.findById(20L))
+    void createReviewShouldRejectDuplicateReview() {
+        when(bookingRepository.findById(BOOKING_ID))
                 .thenReturn(Optional.of(booking));
-        when(classReviewRepository.existsByBooking_Id(20L))
+        when(classReviewRepository.existsByBooking_Id(BOOKING_ID))
                 .thenReturn(true);
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
                 () -> classReviewService.createReview(
-                        request, "customer@example.com"));
+                        createRequest(BOOKING_ID, 5, "Good class")
+                )
+        );
 
-        assertEquals(409, exception.getStatusCode().value());
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         verify(classReviewRepository, never()).save(any());
     }
 
     @Test
-    void createReview_whenRatingIsInvalid_throwsBadRequest() {
-        ClassReviewRequest request = new ClassReviewRequest();
-        request.setBookingId(20L);
-        request.setRating(6);
-
-        ResponseStatusException exception = assertThrows(
+    void createReviewShouldRejectInvalidRating() {
+        assertThrows(
                 ResponseStatusException.class,
                 () -> classReviewService.createReview(
-                        request, "customer@example.com"));
+                        createRequest(BOOKING_ID, 6, "Good class")
+                )
+        );
 
-        assertEquals(400, exception.getStatusCode().value());
         verifyNoInteractions(bookingRepository);
         verify(classReviewRepository, never()).save(any());
     }
 
     @Test
-    void deleteReview_whenCustomerOwnsReview_deletesReview() {
-        ClassReview review = new ClassReview();
-        review.setId(30L);
-        review.setBooking(booking);
+    void createReviewShouldRejectNullRating() {
+        assertThrows(
+                ResponseStatusException.class,
+                () -> classReviewService.createReview(
+                        createRequest(BOOKING_ID, null, "Good class")
+                )
+        );
 
-        when(classReviewRepository.findById(30L))
+        verifyNoInteractions(bookingRepository);
+    }
+
+    // UPDATE REVIEW TESTS
+
+    @Test
+    void updateReviewShouldUpdateOwnReview() {
+        when(classReviewRepository.findById(REVIEW_ID))
+                .thenReturn(Optional.of(review));
+        when(classReviewRepository.save(any(ClassReview.class)))
+                .thenReturn(review);
+
+        var response = classReviewService.updateReview(
+                REVIEW_ID,
+                createRequest(BOOKING_ID, 4, "Updated comment")
+        );
+
+        assertNotNull(response);
+        assertEquals(4, review.getRating());
+        assertEquals("Updated comment", review.getComment());
+
+        verify(classReviewRepository).save(review);
+    }
+
+    @Test
+    void updateReviewShouldThrowWhenReviewDoesNotExist() {
+        when(classReviewRepository.findById(REVIEW_ID))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                InformationNotFoundException.class,
+                () -> classReviewService.updateReview(
+                        REVIEW_ID,
+                        createRequest(BOOKING_ID, 4, "Updated comment")
+                )
+        );
+
+        verify(classReviewRepository, never()).save(any());
+    }
+
+    @Test
+    void updateReviewShouldRejectAnotherCustomersReview() {
+        booking.setCustomerId(OTHER_CUSTOMER_ID);
+
+        when(classReviewRepository.findById(REVIEW_ID))
                 .thenReturn(Optional.of(review));
 
-        assertDoesNotThrow(() -> classReviewService.deleteReview(
-                30L, "customer@example.com"));
+        assertThrows(
+                ForbiddenException.class,
+                () -> classReviewService.updateReview(
+                        REVIEW_ID,
+                        createRequest(BOOKING_ID, 4, "Updated comment")
+                )
+        );
+
+        verify(classReviewRepository, never()).save(any());
+    }
+
+    @Test
+    void updateReviewShouldRejectChangingBookingId() {
+        when(classReviewRepository.findById(REVIEW_ID))
+                .thenReturn(Optional.of(review));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> classReviewService.updateReview(
+                        REVIEW_ID,
+                        createRequest(99L, 4, "Updated comment")
+                )
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        verify(classReviewRepository, never()).save(any());
+    }
+
+    @Test
+    void updateReviewShouldRejectInvalidRating() {
+        assertThrows(
+                ResponseStatusException.class,
+                () -> classReviewService.updateReview(
+                        REVIEW_ID,
+                        createRequest(BOOKING_ID, 0, "Invalid rating")
+                )
+        );
+
+        verifyNoInteractions(classReviewRepository);
+    }
+
+    // DELETE REVIEW TESTS
+
+    @Test
+    void deleteReviewShouldDeleteOwnReview() {
+        when(classReviewRepository.findById(REVIEW_ID))
+                .thenReturn(Optional.of(review));
+
+        assertDoesNotThrow(
+                () -> classReviewService.deleteReview(REVIEW_ID)
+        );
 
         verify(classReviewRepository).delete(review);
     }
 
     @Test
-    void deleteReview_whenCustomerDoesNotOwnReview_throwsForbidden() {
-        ClassReview review = new ClassReview();
-        review.setId(30L);
-        review.setBooking(booking);
+    void deleteReviewShouldThrowWhenReviewDoesNotExist() {
+        when(classReviewRepository.findById(REVIEW_ID))
+                .thenReturn(Optional.empty());
 
-        when(classReviewRepository.findById(30L))
+        assertThrows(
+                InformationNotFoundException.class,
+                () -> classReviewService.deleteReview(REVIEW_ID)
+        );
+
+        verify(classReviewRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteReviewShouldRejectAnotherCustomersReview() {
+        booking.setCustomerId(OTHER_CUSTOMER_ID);
+
+        when(classReviewRepository.findById(REVIEW_ID))
                 .thenReturn(Optional.of(review));
 
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
-                () -> classReviewService.deleteReview(
-                        30L, "other@example.com"));
+        assertThrows(
+                ForbiddenException.class,
+                () -> classReviewService.deleteReview(REVIEW_ID)
+        );
 
-        assertEquals(403, exception.getStatusCode().value());
         verify(classReviewRepository, never()).delete(any());
+    }
+
+    // GET REVIEW BY BOOKING TESTS
+
+    @Test
+    void getReviewByBookingShouldReturnOwnReview() {
+        when(bookingRepository.findById(BOOKING_ID))
+                .thenReturn(Optional.of(booking));
+        when(classReviewRepository.findByBooking_Id(BOOKING_ID))
+                .thenReturn(Optional.of(review));
+
+        var response = classReviewService.getReviewByBooking(BOOKING_ID);
+
+        assertNotNull(response);
+    }
+
+    @Test
+    void getReviewByBookingShouldThrowWhenBookingDoesNotExist() {
+        when(bookingRepository.findById(BOOKING_ID))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                InformationNotFoundException.class,
+                () -> classReviewService.getReviewByBooking(BOOKING_ID)
+        );
+    }
+
+    @Test
+    void getReviewByBookingShouldRejectAnotherCustomersBooking() {
+        booking.setCustomerId(OTHER_CUSTOMER_ID);
+
+        when(bookingRepository.findById(BOOKING_ID))
+                .thenReturn(Optional.of(booking));
+
+        assertThrows(
+                ForbiddenException.class,
+                () -> classReviewService.getReviewByBooking(BOOKING_ID)
+        );
+
+        verify(classReviewRepository, never())
+                .findByBooking_Id(any());
+    }
+
+    @Test
+    void getReviewByBookingShouldThrowWhenReviewDoesNotExist() {
+        when(bookingRepository.findById(BOOKING_ID))
+                .thenReturn(Optional.of(booking));
+        when(classReviewRepository.findByBooking_Id(BOOKING_ID))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                InformationNotFoundException.class,
+                () -> classReviewService.getReviewByBooking(BOOKING_ID)
+        );
+    }
+
+    // GET REVIEWS BY FITNESS CLASS TESTS
+
+    @Test
+    void getReviewsByFitnessClassShouldReturnReviews() {
+        when(classReviewRepository
+                .findAllByBooking_FitnessClass_IdOrderByCreatedAtDesc(
+                        FITNESS_CLASS_ID
+                ))
+                .thenReturn(List.of(review));
+
+        var responses =
+                classReviewService.getReviewsByFitnessClass(FITNESS_CLASS_ID);
+
+        assertEquals(1, responses.size());
+    }
+
+    @Test
+    void getReviewsByFitnessClassShouldReturnEmptyListWhenNoReviewsExist() {
+        when(classReviewRepository
+                .findAllByBooking_FitnessClass_IdOrderByCreatedAtDesc(
+                        FITNESS_CLASS_ID
+                ))
+                .thenReturn(List.of());
+
+        var responses =
+                classReviewService.getReviewsByFitnessClass(FITNESS_CLASS_ID);
+
+        assertTrue(responses.isEmpty());
+    }
+
+    // AUTHENTICATION TESTS
+
+    @Test
+    void createReviewShouldRejectNonCustomerRole() {
+        authenticateAs(CUSTOMER_ID, "TRAINER");
+
+        assertThrows(
+                ForbiddenException.class,
+                () -> classReviewService.createReview(
+                        createRequest(BOOKING_ID, 5, "Good class")
+                )
+        );
+
+        verifyNoInteractions(bookingRepository, classReviewRepository);
+    }
+
+    @Test
+    void createReviewShouldRejectUnauthenticatedUser() {
+        SecurityContextHolder.clearContext();
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> classReviewService.createReview(
+                        createRequest(BOOKING_ID, 5, "Good class")
+                )
+        );
+
+        verifyNoInteractions(bookingRepository, classReviewRepository);
     }
 }
