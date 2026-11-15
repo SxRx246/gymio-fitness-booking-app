@@ -1,4 +1,139 @@
 services:
+  # ==========================================
+  # API Gateway - Port 8080
+  # ==========================================
+  api-gateway:
+    build:
+      context: ./microservices/api-gateway
+      dockerfile: Dockerfile
+    image: gymio-api-gateway:latest
+    container_name: gymio-api-gateway
+    restart: unless-stopped
+    ports:
+      - "${API_GATEWAY_PORT:-8080}:8080"
+    environment:
+      PORT: 8080
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
+    depends_on:
+      - user-service
+      - fitness-booking-service
+      - membership-payment-service
+      - notification-service
+    networks:
+      - gymio-network
+
+  # ==========================================
+  # User Service - Port 8081
+  # ==========================================
+  user-service:
+    build:
+      context: ./microservices/user-service
+      dockerfile: Dockerfile
+    image: gymio-user-service:latest
+    container_name: gymio-user-service
+    restart: unless-stopped
+    ports:
+      - "${USER_SERVICE_PORT:-8081}:8081"
+    environment:
+      PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/gymio
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - gymio-network
+
+  # ==========================================
+  # Fitness & Booking Service - Port 8082
+  # ==========================================
+  fitness-booking-service:
+    build:
+      context: ./microservices/fitness-booking-service
+      dockerfile: Dockerfile
+    image: gymio-fitness-booking-service:latest
+    container_name: gymio-fitness-booking-service
+    restart: unless-stopped
+    ports:
+      - "${FITNESS_SERVICE_PORT:-8082}:8082"
+    environment:
+      PORT: 8082
+      DB_URL: jdbc:postgresql://postgres:5432/gymio
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - gymio-network
+
+  # ==========================================
+  # Membership & Payment Service - Port 8083
+  # ==========================================
+  membership-payment-service:
+    build:
+      context: ./microservices/membership-payment-service
+      dockerfile: Dockerfile
+    image: gymio-membership-payment-service:latest
+    container_name: gymio-membership-payment-service
+    restart: unless-stopped
+    ports:
+      - "${MEMBERSHIP_PAYMENT_SERVICE_PORT:-8083}:8083"
+    environment:
+      MEMBERSHIP_PAYMENT_SERVICE_PORT: 8083
+      DB_URL: jdbc:postgresql://postgres:5432/gymio
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - gymio-network
+
+  # ==========================================
+  # Notification Service - Port 8084
+  # ==========================================
+  notification-service:
+    build:
+      context: ./microservices/notification-service
+      dockerfile: Dockerfile
+    image: gymio-notification-service:latest
+    container_name: gymio-notification-service
+    restart: unless-stopped
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-8084}:8084"
+    environment:
+      PORT: 8084
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8081}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - gymio-network
+
+  # ==========================================
+  # PostgreSQL - Port 5433 (host)
+  # ==========================================
   postgres:
     image: postgres:18.6
     container_name: gymio-postgres
@@ -19,6 +154,9 @@ services:
     networks:
       - gymio-network
 
+  # ==========================================
+  # Kafka - Port 9092 (host)
+  # ==========================================
   kafka:
     image: apache/kafka:4.1.1
     container_name: gymio-kafka
@@ -48,79 +186,6 @@ services:
       timeout: 10s
       retries: 10
       start_period: 20s
-    networks:
-      - gymio-network
-
-  user-service:
-    build:
-      context: ./microservices/user-service
-      dockerfile: Dockerfile
-    image: gymio-user-service:latest
-    container_name: gymio-user-service
-    restart: unless-stopped
-    ports:
-      - "${USER_SERVICE_PORT:-8081}:8081"
-    environment:
-      PORT: 8081
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/gymio
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS}
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-    networks:
-      - gymio-network
-
-  notification-service:
-    build:
-      context: ./microservices/notification-service
-      dockerfile: Dockerfile
-    image: gymio-notification-service:latest
-    container_name: gymio-notification-service
-    restart: unless-stopped
-    ports:
-      - "${NOTIFICATION_SERVICE_PORT:-8084}:8084"
-    environment:
-      PORT: 8084
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8081}
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
-    depends_on:
-      kafka:
-        condition: service_healthy
-    networks:
-      - gymio-network
-
-  fitness-booking-service:
-    build:
-      context: ./microservices/fitness-booking-service
-      dockerfile: Dockerfile
-    image: gymio-fitness-booking-service:latest
-    container_name: gymio-fitness-booking-service
-    restart: unless-stopped
-    ports:
-      - "${FITNESS_SERVICE_PORT:-8082}:8082"
-    environment:
-      PORT: 8082
-      DB_URL: jdbc:postgresql://postgres:5432/gymio
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
     networks:
       - gymio-network
 
