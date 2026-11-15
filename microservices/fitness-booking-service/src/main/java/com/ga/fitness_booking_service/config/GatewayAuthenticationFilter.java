@@ -42,7 +42,8 @@ public class GatewayAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return "OPTIONS".equalsIgnoreCase(request.getMethod())
-                || "/actuator/health".equals(request.getServletPath());
+                || request.getServletPath().startsWith("/actuator/health")
+                || "/actuator/info".equals(request.getServletPath());
     }
 
     /**
