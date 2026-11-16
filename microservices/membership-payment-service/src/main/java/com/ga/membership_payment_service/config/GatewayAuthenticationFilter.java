@@ -37,18 +37,23 @@ public class GatewayAuthenticationFilter extends OncePerRequestFilter {
     private String internalSecret;
 
     /**
-     * Determines whether the filter should skip the current request.
+     * Skips authentication for CORS preflight requests, health checks,
+     * and public API documentation endpoints.
      *
      * @param request the incoming HTTP request
-     * @return true for health checks and CORS preflight requests
+     * @return true if the request should bypass this filter
      */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
+
         String path = request.getServletPath();
 
         return "OPTIONS".equalsIgnoreCase(request.getMethod())
-                || "/actuator/health".equals(path)
-                || "/actuator/info".equals(path);
+                || path.startsWith("/actuator/health")
+                || "/actuator/info".equals(path)
+                || path.startsWith("/swagger-ui/")
+                || "/swagger-ui.html".equals(path)
+                || path.startsWith("/v3/api-docs");
     }
 
     /**
