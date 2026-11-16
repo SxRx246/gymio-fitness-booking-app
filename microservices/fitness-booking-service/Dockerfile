@@ -2,7 +2,7 @@ FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-COPY microservices/fitness-booking-service/target/*.jar app.jar
+COPY target/*.jar app.jar
 
 EXPOSE 8082
 
