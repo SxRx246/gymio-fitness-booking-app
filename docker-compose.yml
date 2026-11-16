@@ -37,6 +37,7 @@ services:
       - "${USER_SERVICE_PORT:-8081}:8081"
     environment:
       PORT: 8081
+      SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/gymio
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -70,8 +71,10 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
+      USER_SERVICE_URL: http://user-service:8081
     depends_on:
       postgres:
         condition: service_healthy
