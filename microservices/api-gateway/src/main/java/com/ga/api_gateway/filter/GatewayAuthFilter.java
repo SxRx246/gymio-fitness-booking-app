@@ -1,6 +1,6 @@
 package com.ga.api_gateway.filter;
 
-import com.ga.api_gateway.dto.AuthValidationResponse;
+import com.ga.api_gateway.dto.response.AuthValidationResponse;
 import com.ga.api_gateway.service.AuthValidationService;
 
 import org.springframework.beans.factory.annotation.Value;

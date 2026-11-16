@@ -1,4 +1,4 @@
-package com.ga.api_gateway.dto;
+package com.ga.api_gateway.dto.response;
 
 /**
  * Represents the authenticated user's identity returned by User Service.

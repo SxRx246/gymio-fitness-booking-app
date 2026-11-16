@@ -1,6 +1,6 @@
 package com.ga.api_gateway.service;
 
-import com.ga.api_gateway.dto.AuthValidationResponse;
+import com.ga.api_gateway.dto.response.AuthValidationResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;

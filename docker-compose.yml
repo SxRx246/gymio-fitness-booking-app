@@ -14,6 +14,7 @@ services:
     environment:
       PORT: 8080
       INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
+      SPRING_PROFILES_ACTIVE: docker
     depends_on:
       - user-service
       - fitness-booking-service
