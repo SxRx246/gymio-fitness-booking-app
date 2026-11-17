@@ -16,10 +16,14 @@ services:
       INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      - user-service
-      - fitness-booking-service
-      - membership-payment-service
-      - notification-service
+      user-service:
+        condition: service_healthy
+      fitness-booking-service:
+        condition: service_healthy
+      membership-payment-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
     networks:
       - gymio-network
 
@@ -50,6 +54,12 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8081/actuator/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     networks:
       - gymio-network
 
@@ -67,19 +77,28 @@ services:
       - "${FITNESS_SERVICE_PORT:-8082}:8082"
     environment:
       PORT: 8082
+      SPRING_PROFILES_ACTIVE: docker
       DB_URL: jdbc:postgresql://postgres:5432/gymio
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
-      USER_SERVICE_URL: http://user-service:8081
+      APP_INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
+      APP_USER_SERVICE_BASE_URL: http://user-service:8081
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      user-service:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8082/actuator/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     networks:
       - gymio-network
 
@@ -97,6 +116,7 @@ services:
       - "${MEMBERSHIP_PAYMENT_SERVICE_PORT:-8083}:8083"
     environment:
       MEMBERSHIP_PAYMENT_SERVICE_PORT: 8083
+      SPRING_PROFILES_ACTIVE: docker
       DB_URL: jdbc:postgresql://postgres:5432/gymio
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -107,6 +127,12 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8083/actuator/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     networks:
       - gymio-network
 
@@ -132,6 +158,12 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8084/actuator/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     networks:
       - gymio-network
 
@@ -186,10 +218,10 @@ services:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"]
-      interval: 10s
-      timeout: 10s
+      interval: 15s
+      timeout: 30s
       retries: 10
-      start_period: 20s
+      start_period: 60s
     networks:
       - gymio-network
 

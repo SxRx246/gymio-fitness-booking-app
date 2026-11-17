@@ -46,4 +46,12 @@ public interface FitnessClassRepository
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT f FROM FitnessClass f WHERE f.id = :id")
     Optional<FitnessClass> findByIdForUpdate(@Param("id") Long id);
+
+    boolean existsByNameAndStartTimeAndTrainerId(
+            String name,
+            LocalDateTime startTime,
+            Long trainerId
+    );
+
+    boolean existsByNameAndTrainerId(String name, Long trainerId);
 }
