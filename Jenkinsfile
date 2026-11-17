@@ -15,6 +15,10 @@ pipeline {
                         credentialsId: 'gymio-db',
                         usernameVariable: 'DB_USERNAME',
                         passwordVariable: 'DB_PASSWORD'
+                    ),
+                    string(
+                        credentialsId: 'gymio-jwt-secret',
+                        variable: 'JWT_SECRET'
                     )
                 ]) {
                     sh 'chmod +x mvnw'
