@@ -19,6 +19,23 @@ pipeline {
                     string(
                         credentialsId: 'gymio-jwt-secret',
                         variable: 'JWT_SECRET'
+                    ),
+                    string(
+                        credentialsId: 'gymio-internal-auth-secret',
+                        variable: 'INTERNAL_AUTH_SECRET'
+                    ),
+                    usernamePassword(
+                        credentialsId: 'gymio-mail',
+                        usernameVariable: 'MAIL_USERNAME',
+                        passwordVariable: 'MAIL_PASSWORD'
+                    ),
+                    string(
+                        credentialsId: 'gymio-jwt-expiration',
+                        variable: 'JWT_EXPIRATION_MS'
+                    ),
+                    string(
+                        credentialsId: 'gymio-public-url',
+                        variable: 'PUBLIC_BASE_URL'
                     )
                 ]) {
                     sh 'chmod +x mvnw'
