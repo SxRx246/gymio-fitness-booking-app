@@ -4,6 +4,7 @@ pipeline {
     environment {
         DB_URL = 'jdbc:postgresql://gymio-postgres:5432/gymio'
         DB_TEST_URL = 'jdbc:postgresql://gymio-postgres:5432/gymio_test'
+        KAFKA_BOOTSTRAP_SERVERS = 'kafka:29092'
     }
 
     stages {
