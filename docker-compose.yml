@@ -152,7 +152,7 @@ services:
       PORT: 8084
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
-      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8081}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET}
     depends_on:
