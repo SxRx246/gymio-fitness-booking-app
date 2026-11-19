@@ -5,7 +5,7 @@ pipeline {
         JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
         PATH = "${JAVA_HOME}/bin:${env.PATH}"
 
-        DB_URL = 'jdbc:postgresql://172.31.39.199:5432/gymio'
+        DB_URL = 'jdbc:postgresql://172.31.39.199:5432/gymio_db'
         DB_TEST_URL = 'jdbc:postgresql://172.31.39.199:5432/gymio_test'
         KAFKA_BOOTSTRAP_SERVERS = '172.31.39.10:9092'
     }
@@ -44,7 +44,11 @@ pipeline {
                     )
                 ]) {
                     sh 'chmod +x mvnw'
-                    sh './mvnw clean verify'
+
+                    // Run tests against the isolated test database.
+                    withEnv(["DB_URL=${DB_TEST_URL}"]) {
+                        sh './mvnw clean verify'
+                    }
                 }
             }
         }
