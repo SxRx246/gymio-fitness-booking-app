@@ -47,14 +47,13 @@ pipeline {
 
                     withEnv(["DB_URL=${DB_TEST_URL}"]) {
                         sh '''
-                            export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+                            export JAVA_HOME=/opt/java/openjdk
                             export PATH="$JAVA_HOME/bin:$PATH"
 
                             echo "Using Java:"
                             echo "JAVA_HOME=$JAVA_HOME"
-                            java -version
+                            "$JAVA_HOME/bin/java" -version
 
-                            chmod +x mvnw
                             ./mvnw clean verify
                         '''
                     }
