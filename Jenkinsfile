@@ -5,7 +5,7 @@ pipeline {
         JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
         PATH = "${JAVA_HOME}/bin:${env.PATH}"
 
-        DB_URL = 'jdbc:postgresql://gymio-postgres:5432/gymio'
+        DB_URL = 'jdbc:postgresql://172.31.39.199:5432/gymio'
         DB_TEST_URL = 'jdbc:postgresql://gymio-postgres:5432/gymio_test'
         KAFKA_BOOTSTRAP_SERVERS = 'kafka:29092'
     }
