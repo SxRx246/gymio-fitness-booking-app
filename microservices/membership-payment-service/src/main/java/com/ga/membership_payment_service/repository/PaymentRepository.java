@@ -1,0 +1,36 @@
+package com.ga.membership_payment_service.repository;
+
+import com.ga.membership_payment_service.model.Payment;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface PaymentRepository extends JpaRepository<Payment, Long> {
+
+    List<Payment> findAllByCustomerIdOrderByCreatedAtDesc(Long customerId);
+
+    List<Payment> findAllByBookingId(Long bookingId);
+
+    Optional<Payment> findByProviderPaymentId(String providerPaymentId);
+
+    boolean existsByBookingIdAndStatus(
+            Long bookingId,
+            Payment.Status status
+    );
+
+    boolean existsByCustomerIdAndMembershipPlan_IdAndPaymentTypeAndStatus(
+            Long customerId,
+            Long membershipPlanId,
+            Payment.PaymentType paymentType,
+            Payment.Status status
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<Payment> findByIdAndStatus(
+            Long paymentId,
+            Payment.Status status
+    );
+}

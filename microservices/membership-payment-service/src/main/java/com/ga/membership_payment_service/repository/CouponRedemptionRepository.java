@@ -1,0 +1,26 @@
+package com.ga.membership_payment_service.repository;
+
+import com.ga.membership_payment_service.model.CouponRedemption;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface CouponRedemptionRepository
+        extends JpaRepository<CouponRedemption, Long> {
+
+    Optional<CouponRedemption> findByCoupon_IdAndCustomerId(
+            Long couponId, Long customerId);
+
+    boolean existsByCoupon_IdAndCustomerId(
+            Long couponId, Long customerId);
+
+    List<CouponRedemption> findAllByCustomerIdOrderByRedeemedAtDesc(
+            Long customerId);
+
+    long countByCoupon_Id(Long couponId);
+
+    Optional<CouponRedemption> findByPayment_Id(Long paymentId);
+
+    boolean existsByPayment_Id(Long paymentId);
+}

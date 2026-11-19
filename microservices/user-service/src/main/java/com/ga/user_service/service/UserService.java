@@ -1,0 +1,404 @@
+package com.ga.user_service.service;
+
+import com.ga.user_service.authentication.*;
+import com.ga.user_service.dto.request.*;
+import com.ga.user_service.event.PasswordResetEmailRequestedEvent;
+import com.ga.user_service.event.VerificationEmailRequestedEvent;
+import com.ga.user_service.exception.*;
+import com.ga.user_service.messaging.KafkaProducerService;
+import com.ga.user_service.model.AuditLog;
+import com.ga.user_service.model.User;
+import com.ga.user_service.dto.response.LoginResponse;
+import com.ga.user_service.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.Base64;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * Manages user accounts, authentication, email verification,
+ * password recovery, and user administration.
+ */
+@Service
+@RequiredArgsConstructor
+public class UserService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JWTUtils jwtUtils;
+    private final AuthenticationManager authenticationManager;
+    private final KafkaProducerService kafkaProducerService;
+    private final AuditLogService auditLogService;
+
+    /**
+     * Registers a new customer account and sends an email verification link.
+     *
+     * @param request the registration details
+     */
+    public void createUser(RegisterRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+
+        if (userRepository.existsByEmail(email)) {
+            throw new InformationExistsException("An account with this email address already exists.");
+        }
+
+        User user = new User();
+
+        user.setEmail(email);
+
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+
+        user.setEmailVerified(false);
+
+        user.setStatus(User.Status.ACTIVE);
+
+        user.setRole(User.Role.CUSTOMER);
+
+        String token = UUID.randomUUID().toString();
+
+        user.setVerificationToken(token);
+
+        user.setVerificationTokenExpiresAt(
+                LocalDateTime.now().plusHours(24)
+        );
+
+        user.setVerificationEmailSentAt(
+                LocalDateTime.now()
+        );
+
+        User savedUser = userRepository.save(user);
+
+        auditLogService.log(
+                AuditLog.Action.SIGNUP,
+                "User " + savedUser.getId() + " signed up",
+                savedUser
+        );
+
+        kafkaProducerService.sendVerificationEmail(
+                new VerificationEmailRequestedEvent(
+                        savedUser.getEmail(),
+                        token
+                )
+        );
+    }
+
+    /**
+     * Verifies a user's email using a valid, unexpired verification token.
+     *
+     * @param token the email verification token
+     */
+    public void verifyEmail(String token) {
+
+        User user = userRepository
+                .findByVerificationToken(token)
+                .orElseThrow(() ->
+                        new InvalidTokenException(
+                                "Invalid verification token"
+                        )
+                );
+
+        if (user.isEmailVerified()) {
+            throw new InformationExistsException(
+                    "Email is already verified"
+            );
+        }
+
+        if (user.getVerificationTokenExpiresAt()
+                .isBefore(LocalDateTime.now())) {
+
+            throw new InvalidTokenException(
+                    "Verification token has expired"
+            );
+        }
+
+        user.setEmailVerified(true);
+
+        user.setVerificationToken(null);
+
+        user.setVerificationTokenExpiresAt(null);
+
+        userRepository.save(user);
+
+        auditLogService.log(
+                AuditLog.Action.VERIFY_EMAIL,
+                "User " + user.getId() + " verified their email",
+                user
+        );
+    }
+
+    /**
+     * Resends the verification email if the user is eligible to request one.
+     *
+     * @param email the email address of the user
+     * @throws UsernameNotFoundException if no user exists with the email
+     */
+    public void resendVerificationEmail(String email) throws UsernameNotFoundException {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new UsernameNotFoundException("User not found")
+                );
+
+        if (user.isEmailVerified()) {
+            throw new InformationExistsException(
+                    "Email is already verified"
+            );
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        if (user.getVerificationEmailSentAt() != null) {
+
+            LocalDateTime nextAllowedTime =
+                    user.getVerificationEmailSentAt()
+                            .plusMinutes(1);
+
+            if (now.isBefore(nextAllowedTime)) {
+
+                throw new TooManyRequestsException(
+                        "Please wait before requesting another verification email."
+                );
+            }
+        }
+
+        String newToken = UUID.randomUUID().toString();
+
+        user.setVerificationToken(newToken);
+
+        user.setVerificationTokenExpiresAt(
+                now.plusHours(24)
+        );
+
+        user.setVerificationEmailSentAt(now);
+
+        userRepository.save(user);
+
+        kafkaProducerService.sendVerificationEmail(
+                new VerificationEmailRequestedEvent(
+                        user.getEmail(),
+                        newToken
+                )
+        );
+    }
+
+    /**
+     * Authenticates a user and generates a JWT after successful login.
+     *
+     * @param loginRequest the user's login credentials
+     * @return a response containing the JWT
+     */
+    public LoginResponse loginUser(LoginRequest loginRequest) {
+        try {
+            Authentication authentication = authenticationManager
+                    .authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getEmail(),
+                            loginRequest.getPassword()));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            MyUserDetails myUserDetails = (MyUserDetails) authentication.getPrincipal();
+            final String JWT = jwtUtils.generateJwtToken(myUserDetails);
+            return new LoginResponse(JWT);
+        } catch (AuthenticationException e) {
+            throw new InvalidCredentialsException("Invalid email or password");
+        }
+    }
+
+
+    private String generateResetToken() {
+
+        SecureRandom secureRandom = new SecureRandom();
+
+        byte[] tokenBytes = new byte[32];
+
+        secureRandom.nextBytes(tokenBytes);
+
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
+    }
+
+    /**
+     * Initiates password recovery by sending a reset link when the account exists.
+     *
+     * @param request the password recovery request
+     */
+    public void forgotPassword(ForgotPasswordRequest request) {
+
+        String email = request.getEmail()
+                .trim()
+                .toLowerCase();
+
+        Optional<User> optionalUser =
+                userRepository.findByEmail(email);
+
+        if (optionalUser.isEmpty()) {
+            return;
+        }
+
+        User user = optionalUser.get();
+
+        String token = generateResetToken();
+
+        user.setPasswordResetToken(token);
+
+        user.setPasswordResetTokenExpiresAt(
+                LocalDateTime.now().plusMinutes(15)
+        );
+
+        userRepository.save(user);
+
+        kafkaProducerService.sendPasswordResetEmail(
+                new PasswordResetEmailRequestedEvent(
+                        user.getEmail(),
+                        token
+                )
+        );
+    }
+
+    /**
+     * Resets a user's password using a valid, unexpired reset token.
+     *
+     * @param request the password reset details
+     */
+    public void resetPassword(ResetPasswordRequest request) {
+
+        User user = userRepository
+                .findByPasswordResetToken(request.getToken())
+                .orElseThrow(() ->
+                        new InvalidTokenException(
+                                "Invalid password reset token"
+                        )
+                );
+
+        if (user.getPasswordResetTokenExpiresAt() == null
+                || user.getPasswordResetTokenExpiresAt()
+                .isBefore(LocalDateTime.now())) {
+
+            throw new InvalidTokenException(
+                    "Password reset token has expired"
+            );
+        }
+
+        user.setPassword(
+                passwordEncoder.encode(request.getNewPassword())
+        );
+
+        user.setPasswordResetToken(null);
+        user.setPasswordResetTokenExpiresAt(null);
+
+        userRepository.save(user);
+
+        auditLogService.log(
+                AuditLog.Action.RESET_PASSWORD,
+                "User " + user.getId() + " reset their password",
+                user
+        );
+    }
+
+    /**
+     * Retrieves the currently authenticated user.
+     *
+     * @return the authenticated user's account
+     */
+    public User getCurrentUser(){
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        MyUserDetails myUserDetails =
+                (MyUserDetails) authentication.getPrincipal();
+
+        User currentUser = myUserDetails.getUser();
+
+        return currentUser;
+    }
+
+    /**
+     * Changes the authenticated user's password after verifying the current password.
+     *
+     * @param request the current and new password details
+     */
+    public void changePassword(ChangePasswordRequest request) {
+
+        User currentUser = getCurrentUser();
+
+        if (!passwordEncoder.matches(
+                request.getCurrentPassword(),
+                currentUser.getPassword())) {
+
+            throw new ForbiddenException(
+                    "Current password is incorrect"
+            );
+        }
+
+        if (passwordEncoder.matches(
+                request.getNewPassword(),
+                currentUser.getPassword())) {
+
+            throw new IllegalArgumentException(
+                    "New password must be different from your current password"
+            );
+        }
+
+        currentUser.setPassword(
+                passwordEncoder.encode(request.getNewPassword())
+        );
+
+        userRepository.save(currentUser);
+
+        auditLogService.log(
+                AuditLog.Action.CHANGE_PASSWORD,
+                "User " + currentUser.getId() + " changed their password",
+                currentUser
+        );
+    }
+
+    /**
+     * Retrieves all registered users.
+     *
+     * @return the list of users
+     */
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    /**
+     * Updates a user's role or account status.
+     *
+     * @param id the ID of the user to update
+     * @param request the fields to update
+     */
+    public void updateUser(Long id, AdminUserUpdateRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new InformationNotFoundException(
+                                "User with id " + id + " not found")
+                );
+
+        if (request.getRole() != null) {
+            user.setRole(request.getRole());
+        }
+
+        if (request.getStatus() != null) {
+            user.setStatus(request.getStatus());
+        }
+
+        userRepository.save(user);
+
+        User currentUser = getCurrentUser();
+
+        auditLogService.log(
+                AuditLog.Action.UPDATE_USER,
+                "Admin " + currentUser.getId() + " updated User " + user.getId(),
+                currentUser
+        );
+    }
+
+}

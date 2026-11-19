@@ -1,0 +1,9 @@
+.git
+.idea
+.vscode
+.env
+.env.*
+!.env.example
+target/*
+!target/*.jar
+*.log
