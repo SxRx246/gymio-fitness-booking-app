@@ -60,7 +60,6 @@ pipeline {
     environment {
         // ---- AWS target -------------------------------------------------
         'PATH+LOCAL'   = "/var/jenkins_home/.local/bin"
-        'PATH+LOCAL'   = "/var/jenkins_home/.local/bin"
         AWS_REGION     = 'eu-north-1'
         EB_APPLICATION = 'gymio'
         EB_ENVIRONMENT = 'gymio-env'
@@ -93,6 +92,7 @@ pipeline {
                 script {
                     sh '''
                         set -e
+                        export PATH="/var/jenkins_home/.local/bin:$PATH"
                         export PATH="$HOME/.local/bin:$PATH"
                         echo "Java   : $(java -version 2>&1 | head -n 1)"
                         docker --version
@@ -183,6 +183,7 @@ pipeline {
                     withEnv(["DB_URL=${env.DB_TEST_URL}", "SPRING_DATASOURCE_URL=${env.DB_TEST_URL}"]) {
                         sh """
                             set -e
+                        export PATH="/var/jenkins_home/.local/bin:$PATH"
                             if [ -d "${env.JAVA_HOME_DIR}" ]; then export JAVA_HOME=${env.JAVA_HOME_DIR}; export PATH="\$JAVA_HOME/bin:\$PATH"; fi
                             java -version
 
@@ -202,6 +203,7 @@ pipeline {
             steps {
                 sh '''
                     set -e
+                        export PATH="/var/jenkins_home/.local/bin:$PATH"
                     for pair in $SERVICES; do
                         dir=${pair%%=*}
                         repo=${pair#*=}
@@ -217,6 +219,7 @@ pipeline {
             steps {
                 sh '''
                     set -e
+                        export PATH="/var/jenkins_home/.local/bin:$PATH"
                     aws ecr get-login-password --region "$AWS_REGION" \
                         | docker login --username AWS --password-stdin "$ECR_REGISTRY"
                     trap 'docker logout "$ECR_REGISTRY" >/dev/null 2>&1 || true' EXIT
@@ -249,6 +252,7 @@ pipeline {
                 ]) {
                     sh """
                         set -e
+                        export PATH="/var/jenkins_home/.local/bin:$PATH"
 
                         rm -rf build
                         mkdir -p build
@@ -291,6 +295,7 @@ pipeline {
             steps {
                 sh '''
                     set -e
+                        export PATH="/var/jenkins_home/.local/bin:$PATH"
 
                     echo "==> Waiting for version $IMAGE_TAG to become live on $EB_ENVIRONMENT"
                     ready=0
