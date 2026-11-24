@@ -99,7 +99,7 @@ pipeline {
                         if ! command -v aws >/dev/null 2>&1; then
                             echo "==> Installing AWS CLI v2 into $HOME/.local ..."
                             mkdir -p "$HOME/.local/aws-cli" "$HOME/.local/bin"
-                            curl -sSL "https://amazonaws.com" -o /tmp/awscliv2.zip
+                            curl -sSL "https://amazonaws.com(uname -m).zip" -o /tmp/awscliv2.zip
                             (cd /tmp && jar -xf /tmp/awscliv2.zip)
                             chmod +x /tmp/aws/install /tmp/aws/dist/aws /tmp/aws/dist/aws_completer 2>/dev/null || true
                             /tmp/aws/install -i "$HOME/.local/aws-cli" -b "$HOME/.local/bin" --update
