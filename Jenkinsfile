@@ -59,7 +59,7 @@ pipeline {
 
     environment {
         // ---- AWS target -------------------------------------------------
-        AWS_REGION     = 'eu-west-1'
+        AWS_REGION     = 'eu-north-1'
         EB_APPLICATION = 'gymio'
         EB_ENVIRONMENT = 'gymio-env'
         // Defaults to elasticbeanstalk-<region>-<account-id> when left empty.
