@@ -92,19 +92,45 @@ pipeline {
                     sh '''
                         set -e
                         export PATH="/var/jenkins_home/.local/bin:$PATH"
-                        export PATH="/var/jenkins_home/.local/bin:$PATH"
-                        export PATH="$HOME/.local/bin:$PATH"
-                        echo "Java   : $(java -version 2>&1 | head -n 1)"
+
+                        echo "Java: $(java -version 2>&1 | head -n 1)"
                         docker --version
+
                         if ! command -v aws >/dev/null 2>&1; then
                             echo "==> Installing AWS CLI v2 into $HOME/.local ..."
+
                             mkdir -p "$HOME/.local/aws-cli" "$HOME/.local/bin"
-                            curl -sSL "https://amazonaws.com(uname -m).zip" -o /tmp/awscliv2.zip
+
+                            ARCH=$(uname -m)
+
+                            case "$ARCH" in
+                                x86_64)
+                                    AWS_ARCH="x86_64"
+                                    ;;
+                                aarch64|arm64)
+                                    AWS_ARCH="aarch64"
+                                    ;;
+                                *)
+                                    echo "Unsupported architecture: $ARCH"
+                                    exit 1
+                                    ;;
+                            esac
+
+                            curl -fsSL \
+                                "https://awscli.amazonaws.com/awscli-exe-linux-${AWS_ARCH}.zip" \
+                                -o /tmp/awscliv2.zip
+
                             (cd /tmp && jar -xf /tmp/awscliv2.zip)
                             chmod +x /tmp/aws/install /tmp/aws/dist/aws /tmp/aws/dist/aws_completer 2>/dev/null || true
-                            /tmp/aws/install -i "$HOME/.local/aws-cli" -b "$HOME/.local/bin" --update
+
+                            /tmp/aws/install \
+                                -i "$HOME/.local/aws-cli" \
+                                -b "$HOME/.local/bin" \
+                                --update
+
                             rm -rf /tmp/aws /tmp/awscliv2.zip
                         fi
+
                         aws --version
                     '''
 
@@ -185,6 +211,7 @@ pipeline {
                             set -e
                         export PATH="/var/jenkins_home/.local/bin:$PATH"
                         export PATH="/var/jenkins_home/.local/bin:$PATH"
+                        export PATH="/var/jenkins_home/.local/bin:$PATH"
                             if [ -d "${env.JAVA_HOME_DIR}" ]; then export JAVA_HOME=${env.JAVA_HOME_DIR}; export PATH="\$JAVA_HOME/bin:\$PATH"; fi
                             java -version
 
@@ -206,6 +233,7 @@ pipeline {
                     set -e
                         export PATH="/var/jenkins_home/.local/bin:$PATH"
                         export PATH="/var/jenkins_home/.local/bin:$PATH"
+                        export PATH="/var/jenkins_home/.local/bin:$PATH"
                     for pair in $SERVICES; do
                         dir=${pair%%=*}
                         repo=${pair#*=}
@@ -221,6 +249,7 @@ pipeline {
             steps {
                 sh '''
                     set -e
+                        export PATH="/var/jenkins_home/.local/bin:$PATH"
                         export PATH="/var/jenkins_home/.local/bin:$PATH"
                         export PATH="/var/jenkins_home/.local/bin:$PATH"
                     aws ecr get-login-password --region "$AWS_REGION" \
@@ -255,6 +284,7 @@ pipeline {
                 ]) {
                     sh """
                         set -e
+                        export PATH="/var/jenkins_home/.local/bin:$PATH"
                         export PATH="/var/jenkins_home/.local/bin:$PATH"
                         export PATH="/var/jenkins_home/.local/bin:$PATH"
 
@@ -299,6 +329,7 @@ pipeline {
             steps {
                 sh '''
                     set -e
+                        export PATH="/var/jenkins_home/.local/bin:$PATH"
                         export PATH="/var/jenkins_home/.local/bin:$PATH"
                         export PATH="/var/jenkins_home/.local/bin:$PATH"
 
