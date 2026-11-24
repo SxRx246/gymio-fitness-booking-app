@@ -21,8 +21,9 @@ import java.util.Set;
  * Global authentication filter for the API Gateway.
  *
  * <p>This filter centralizes JWT authentication by delegating token
- * validation to the User Service. Public authentication endpoints
- * and CORS preflight requests bypass token validation.</p>
+ * validation to the User Service. Public authentication endpoints,
+ * the health endpoint and CORS preflight requests bypass token
+ * validation.</p>
  *
  * <p>For protected requests, the filter validates the JWT and forwards
  * the request with trusted user identity headers containing the
@@ -58,6 +59,9 @@ public class GatewayAuthFilter implements GlobalFilter, Ordered {
 
     /**
      * Endpoints that can be accessed without JWT authentication.
+     *
+     * <p>Includes the health endpoint so that the Elastic Beanstalk load
+     * balancer can reach it without credentials.</p>
      */
     private static final Set<String> PUBLIC_ENDPOINTS = Set.of(
             "/auth/users/login",
@@ -65,7 +69,8 @@ public class GatewayAuthFilter implements GlobalFilter, Ordered {
             "/auth/users/verify",
             "/auth/users/resend-verification",
             "/auth/users/forgot-password",
-            "/auth/users/reset-password"
+            "/auth/users/reset-password",
+            "/actuator/health"
     );
 
     /**

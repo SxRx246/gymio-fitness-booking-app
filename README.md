@@ -333,11 +333,22 @@ The project includes automated tests for important service-layer business logic.
 - The rate limiter and SSE connection tracking use in-memory storage and are intended for a single application instance.
 - The exact endpoint paths and request schemas should be verified through Swagger UI as the API evolves.
 
+## Deployment
+
+The pipeline in `Jenkinsfile` builds and tests all five modules, publishes one
+Docker image per service to Amazon ECR tagged with the Git commit SHA, deploys
+them to AWS Elastic Beanstalk, and verifies the result through
+`/actuator/health`. It rolls back to the previous version if the health check
+fails.
+
+See [deploy/README.md](deploy/README.md) for the one-time AWS setup (IAM role,
+ECR repositories, Elastic Beanstalk environment, Jenkins credentials) and for
+how the deployment is wired.
+
 ## Future Improvements
 
 - Build a frontend application
 - Expand integration and end-to-end test coverage
-- Add Docker-based deployment
 - Consider distributed storage for rate limiting and SSE connection management when scaling to multiple application instances
 
 ## Credits & External Resources
