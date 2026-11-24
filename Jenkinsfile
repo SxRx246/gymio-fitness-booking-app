@@ -59,8 +59,8 @@ pipeline {
 
     environment {
         // ---- AWS target -------------------------------------------------
-        PATH+LOCAL     = "/var/jenkins_home/.local/bin"
-        PATH+LOCAL     = "/var/jenkins_home/.local/bin"
+        'PATH+LOCAL'   = "/var/jenkins_home/.local/bin"
+        'PATH+LOCAL'   = "/var/jenkins_home/.local/bin"
         AWS_REGION     = 'eu-north-1'
         EB_APPLICATION = 'gymio'
         EB_ENVIRONMENT = 'gymio-env'
