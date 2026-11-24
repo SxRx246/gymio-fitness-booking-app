@@ -169,7 +169,7 @@ pipeline {
                                      usernameVariable: 'MAIL_USERNAME',
                                      passwordVariable: 'MAIL_PASSWORD')
                 ]) {
-                    withEnv(["DB_URL=${env.DB_TEST_URL}"]) {
+                    withEnv(["DB_URL=${env.DB_TEST_URL}", "SPRING_DATASOURCE_URL=${env.DB_TEST_URL}"]) {
                         sh """
                             set -e
                             export JAVA_HOME=${env.JAVA_HOME_DIR}
