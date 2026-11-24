@@ -55,7 +55,7 @@ pipeline {
 
     environment {
         // Makes AWS CLI available in every Jenkins shell step.
-        PATH+LOCAL = '/var/jenkins_home/.local/bin'
+        PATH = "/var/jenkins_home/.local/bin:${env.PATH}"
 
         // AWS target
         AWS_REGION = 'eu-north-1'
