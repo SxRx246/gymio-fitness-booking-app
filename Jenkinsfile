@@ -59,6 +59,7 @@ pipeline {
 
     environment {
         // ---- AWS target -------------------------------------------------
+        PATH           = "/var/jenkins_home/.local/bin:${env.PATH}"
         AWS_REGION     = 'eu-north-1'
         EB_APPLICATION = 'gymio'
         EB_ENVIRONMENT = 'gymio-env'
@@ -91,11 +92,19 @@ pipeline {
                 script {
                     sh '''
                         set -e
+                        export PATH="$HOME/.local/bin:$PATH"
                         echo "Java   : $(java -version 2>&1 | head -n 1)"
                         docker --version
+                        if ! command -v aws >/dev/null 2>&1; then
+                            echo "==> Installing AWS CLI v2 into $HOME/.local ..."
+                            mkdir -p "$HOME/.local/aws-cli" "$HOME/.local/bin"
+                            curl -sSL "https://amazonaws.com" -o /tmp/awscliv2.zip
+                            (cd /tmp && jar -xf /tmp/awscliv2.zip)
+                            chmod +x /tmp/aws/install /tmp/aws/dist/aws /tmp/aws/dist/aws_completer 2>/dev/null || true
+                            /tmp/aws/install -i "$HOME/.local/aws-cli" -b "$HOME/.local/bin" --update
+                            rm -rf /tmp/aws /tmp/awscliv2.zip
+                        fi
                         aws --version
-                        command -v curl >/dev/null 2>&1 || { echo "ERROR: 'curl' is required on the Jenkins agent" >&2; exit 1; }
-                        command -v zip  >/dev/null 2>&1 || { echo "ERROR: 'zip' is required on the Jenkins agent"  >&2; exit 1; }
                     '''
 
                     if (!env.GIT_COMMIT) {
@@ -105,7 +114,8 @@ pipeline {
                     env.SERVICES    = SERVICE_LIST.join(' ')
                     env.IMAGE_TAG   = env.GIT_COMMIT
                     // GIT_BRANCH may arrive as "origin/main".
-                    env.BUILD_BRANCH = (env.GIT_BRANCH ?: '').replaceFirst(/^origin\//, '')
+                    def rawBranch = env.GIT_BRANCH ?: sh(returnStdout: true, script: "git name-rev --name-only HEAD").trim()
+                    env.BUILD_BRANCH = rawBranch.replaceFirst(/^origin\//, '').replaceFirst(/^remotes\/origin\//, '')
                     env.IS_DEPLOY_BRANCH = (env.BUILD_BRANCH == env.DEPLOY_BRANCH).toString()
 
                     env.AWS_ACCOUNT_ID = sh(
@@ -172,8 +182,7 @@ pipeline {
                     withEnv(["DB_URL=${env.DB_TEST_URL}", "SPRING_DATASOURCE_URL=${env.DB_TEST_URL}"]) {
                         sh """
                             set -e
-                            export JAVA_HOME=${env.JAVA_HOME_DIR}
-                            export PATH="\$JAVA_HOME/bin:\$PATH"
+                            if [ -d "${env.JAVA_HOME_DIR}" ]; then export JAVA_HOME=${env.JAVA_HOME_DIR}; export PATH="\$JAVA_HOME/bin:\$PATH"; fi
                             java -version
 
                             chmod +x mvnw
@@ -246,7 +255,7 @@ pipeline {
                         # Dockerrun.aws.json + .ebextensions form the EB source bundle.
                         bash deploy/render-compose.sh build/docker-compose.yml
                         cp -r deploy/.ebextensions build/
-                        ( cd build && zip -q -r "../gymio-${env.IMAGE_TAG}.zip" docker-compose.yml .ebextensions )
+                        ( cd build && if command -v zip >/dev/null 2>&1; then zip -q -r "../gymio-${env.IMAGE_TAG}.zip" docker-compose.yml .ebextensions; else jar -cMf "../gymio-${env.IMAGE_TAG}.zip" docker-compose.yml .ebextensions; fi )
 
                         echo "==> Uploading bundle to s3://${env.EB_S3_BUCKET}/gymio/${env.IMAGE_TAG}.zip"
                         aws s3 cp "gymio-${env.IMAGE_TAG}.zip" "s3://${env.EB_S3_BUCKET}/gymio/${env.IMAGE_TAG}.zip"
