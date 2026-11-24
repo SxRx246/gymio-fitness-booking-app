@@ -270,7 +270,7 @@ pipeline {
                             --environment-name "${env.EB_ENVIRONMENT}" \\
                             --version-label "${env.IMAGE_TAG}"
                     """
-                    env.DEPLOY_STARTED = 'true'
+                    script { env.DEPLOY_STARTED = 'true' }
                 }
             }
         }
