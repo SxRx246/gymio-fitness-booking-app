@@ -1,11 +1,11 @@
 package com.ga.notification_service.config;
 
-
 import com.ga.notification_service.event.CustomerNotificationEvent;
 import com.ga.notification_service.event.PasswordResetEmailRequestedEvent;
 import com.ga.notification_service.event.VerificationEmailRequestedEvent;
 
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,6 +19,9 @@ public class KafkaConsumerConfig {
 
     private final KafkaProperties kafkaProperties;
 
+    @Value("${spring.kafka.listener.auto-startup:true}")
+    private boolean listenerAutoStartup;
+
     public KafkaConsumerConfig(KafkaProperties kafkaProperties) {
         this.kafkaProperties = kafkaProperties;
     }
@@ -28,7 +31,7 @@ public class KafkaConsumerConfig {
     verificationEmailConsumerFactory() {
 
         JacksonJsonDeserializer<VerificationEmailRequestedEvent> deserializer =
-                new JacksonJsonDeserializer<>(
+                new JacksonJsonDeserializer<VerificationEmailRequestedEvent>(
                         VerificationEmailRequestedEvent.class
                 ).ignoreTypeHeaders();
 
@@ -44,7 +47,7 @@ public class KafkaConsumerConfig {
     passwordResetEmailConsumerFactory() {
 
         JacksonJsonDeserializer<PasswordResetEmailRequestedEvent> deserializer =
-                new JacksonJsonDeserializer<>(
+                new JacksonJsonDeserializer<PasswordResetEmailRequestedEvent>(
                         PasswordResetEmailRequestedEvent.class
                 ).ignoreTypeHeaders();
 
@@ -63,6 +66,7 @@ public class KafkaConsumerConfig {
                 String, VerificationEmailRequestedEvent>();
 
         factory.setConsumerFactory(verificationEmailConsumerFactory());
+        factory.setAutoStartup(listenerAutoStartup);
 
         return factory;
     }
@@ -75,21 +79,17 @@ public class KafkaConsumerConfig {
                 String, PasswordResetEmailRequestedEvent>();
 
         factory.setConsumerFactory(passwordResetEmailConsumerFactory());
+        factory.setAutoStartup(listenerAutoStartup);
 
         return factory;
     }
 
-    /**
-     * Creates a consumer factory for customer notification events.
-     *
-     * @return the customer notification consumer factory
-     */
     @Bean
     public ConsumerFactory<String, CustomerNotificationEvent>
     customerNotificationConsumerFactory() {
 
         JacksonJsonDeserializer<CustomerNotificationEvent> deserializer =
-                new JacksonJsonDeserializer<>(
+                new JacksonJsonDeserializer<CustomerNotificationEvent>(
                         CustomerNotificationEvent.class
                 ).ignoreTypeHeaders();
 
@@ -100,11 +100,6 @@ public class KafkaConsumerConfig {
         );
     }
 
-    /**
-     * Creates a Kafka listener container factory for customer notifications.
-     *
-     * @return the customer notification listener factory
-     */
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, CustomerNotificationEvent>
     customerNotificationListenerFactory() {
@@ -113,6 +108,7 @@ public class KafkaConsumerConfig {
                 String, CustomerNotificationEvent>();
 
         factory.setConsumerFactory(customerNotificationConsumerFactory());
+        factory.setAutoStartup(listenerAutoStartup);
 
         return factory;
     }
