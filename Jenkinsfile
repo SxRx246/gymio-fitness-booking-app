@@ -22,11 +22,11 @@
 // "<service-directory>=<ecr-repository>" for each deployable service.
 // Edit the right-hand side if your ECR repository names differ.
 def SERVICE_LIST = [
-    'api-gateway=gymio/api-gateway',
-    'user-service=gymio/user-service',
-    'fitness-booking-service=gymio/fitness-booking-service',
-    'membership-payment-service=gymio/membership-payment-service',
-    'notification-service=gymio/notification-service'
+    'api-gateway=gymio-api-gateway',
+    'user-service=gymio-user-service',
+    'fitness-booking-service=gymio-fitness-booking-service',
+    'membership-payment-service=gymio-membership-payment-service',
+    'notification-service=gymio-notification-service'
 ]
 
 pipeline {
@@ -244,9 +244,9 @@ pipeline {
                         mkdir -p build
 
                         # Dockerrun.aws.json + .ebextensions form the EB source bundle.
-                        bash deploy/render-dockerrun.sh build/Dockerrun.aws.json
+                        bash deploy/render-compose.sh build/docker-compose.yml
                         cp -r deploy/.ebextensions build/
-                        ( cd build && zip -q -r "../gymio-${env.IMAGE_TAG}.zip" Dockerrun.aws.json .ebextensions )
+                        ( cd build && zip -q -r "../gymio-${env.IMAGE_TAG}.zip" docker-compose.yml .ebextensions )
 
                         echo "==> Uploading bundle to s3://${env.EB_S3_BUCKET}/gymio/${env.IMAGE_TAG}.zip"
                         aws s3 cp "gymio-${env.IMAGE_TAG}.zip" "s3://${env.EB_S3_BUCKET}/gymio/${env.IMAGE_TAG}.zip"
